@@ -1,11 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  Search,
-  MapPin,
-  // AlertTriangle,
-  Activity,
-  ChevronRight,
-} from "lucide-react";
+import { Search, MapPin, Activity, ChevronRight } from "lucide-react";
 import { useAssetStore } from "@/store/useAssetStore";
 import type { Asset } from "@/@types/asset";
 import { Badge } from "@/components/ui/badge";
@@ -96,7 +90,9 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
               <button
                 key={asset.id}
                 onClick={() => setSelectedAsset(asset)}
-                className={`w-full text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group ${
+                className={`${
+                  isMobile ? "w-full" : "w-[80%]"
+                } text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group ${
                   selectedAsset?.id === asset.id
                     ? "bg-zinc-900/80 border-zinc-700 shadow-xl"
                     : "border-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900/30"
@@ -155,7 +151,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                 {/* Progress Bar para Críticos e selecionados */}
                 {(asset.risco_atual === "Crítico" ||
                   selectedAsset?.id === asset.id) && (
-                  <div className="mt-3 h-[2px] w-full bg-zinc-800/50 rounded-full overflow-hidden">
+                  <div className="mt-3 h-0.5 w-full bg-zinc-800/50 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-500 ${
                         asset.risco_atual === "Crítico"

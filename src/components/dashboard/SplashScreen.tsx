@@ -6,11 +6,11 @@ export function SplashScreen() {
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-zinc-950 text-white"
+      className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-zinc-950 text-white"
     >
       {/* Elemento de Background Sutil */}
       <div className="absolute inset-0 overflow-hidden opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
       </div>
 
       <motion.div
@@ -57,7 +57,7 @@ export function SplashScreen() {
               v2.0.25
             </span>
           </div>
-          <div className="h-[2px] w-full bg-zinc-900 rounded-full overflow-hidden">
+          <div className="h-0.5 w-full bg-zinc-900 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-red-600"
               initial={{ width: "0%" }}
