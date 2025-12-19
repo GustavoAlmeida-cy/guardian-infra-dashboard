@@ -1,0 +1,64 @@
+[
+  {
+    "id": 101,
+    "nome": "Subestação Alpha",
+    "localizacao": "São Paulo, SP",
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:00:00Z"
+  },
+  {
+    "id": 102,
+    "nome": "Centro de Distribuição Beta",
+    "localizacao": "Rio de Janeiro, RJ",
+    "risco_atual": "Moderado",
+    "ultima_atualizacao": "2025-12-04T10:01:00Z"
+  },
+  {
+    "id": 103,
+    "nome": "Data Center Gamma",
+    "localizacao": "Belo Horizonte, MG",
+    "risco_atual": "Crítico",
+    "ultima_atualizacao": "2025-12-04T10:02:00Z",
+    "tempo_estimado_impacto": "45 minutos",
+    "acoes_contingencia": [
+      "Desligar equipamentos não essenciais.",
+      "Ativar geradores de emergência.",
+      "Mobilizar equipe de campo para inspeção."
+    ]
+  },
+  {
+    "id": 104,
+    "nome": "Estação de Tratamento Delta",
+    "localizacao": "Porto Alegre, RS",
+    "risco_atual": "Alto",
+    "ultima_atualizacao": "2025-12-04T10:03:00Z"
+  },
+  {
+    "id": 105,
+    "nome": "Torre de Comunicação Epsilon",
+    "localizacao": "Salvador, BA",
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:04:00Z"
+  },
+  {
+    "id": 106,
+    "nome": "Subestação Zeta",
+    "localizacao": "Curitiba, PR",
+    "risco_atual": "Moderado",
+    "ultima_atualizacao": "2025-12-04T10:05:00Z"
+  },
+  {
+    "id": 107,
+    "nome": "Centro de Distribuição Eta",
+    "localizacao": "Recife, PE",
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:06:00Z"
+  },
+  {
+    "id": 108,
+    "nome": "Data Center Theta",
+    "localizacao": "Fortaleza, CE",
+    "risco_atual": "Alto",
+    "ultima_atualizacao": "2025-12-04T10:07:00Z"
+  }
+]

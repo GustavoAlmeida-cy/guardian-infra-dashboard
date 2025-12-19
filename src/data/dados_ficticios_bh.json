@@ -1,0 +1,138 @@
+[
+  {
+    "id": 101,
+    "nome": "Subestação Centro",
+    "localizacao": "Centro, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9191,
+      "longitude": -43.9386
+    },
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:00:00Z"
+  },
+  {
+    "id": 102,
+    "nome": "Centro de Distribuição Pampulha",
+    "localizacao": "Pampulha, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.8515,
+      "longitude": -43.9668
+    },
+    "risco_atual": "Moderado",
+    "ultima_atualizacao": "2025-12-04T10:01:00Z"
+  },
+  {
+    "id": 103,
+    "nome": "Data Center Savassi",
+    "localizacao": "Savassi, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9356,
+      "longitude": -43.9297
+    },
+    "risco_atual": "Crítico",
+    "ultima_atualizacao": "2025-12-04T10:02:00Z",
+    "tempo_estimado_impacto": "45 minutos",
+    "acoes_contingencia": [
+      "Desligar equipamentos não essenciais.",
+      "Ativar geradores de emergência.",
+      "Mobilizar equipe de campo para inspeção.",
+      "Acionar protocolo de backup de dados."
+    ]
+  },
+  {
+    "id": 104,
+    "nome": "Estação de Tratamento Barreiro",
+    "localizacao": "Barreiro, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9889,
+      "longitude": -44.0333
+    },
+    "risco_atual": "Alto",
+    "ultima_atualizacao": "2025-12-04T10:03:00Z",
+    "tempo_estimado_impacto": "1 hora e 20 minutos",
+    "acoes_contingencia": [
+      "Verificar níveis de reservatórios.",
+      "Preparar bombas de drenagem.",
+      "Alertar equipe de manutenção."
+    ]
+  },
+  {
+    "id": 105,
+    "nome": "Torre de Comunicação Venda Nova",
+    "localizacao": "Venda Nova, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.8133,
+      "longitude": -43.9644
+    },
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:04:00Z"
+  },
+  {
+    "id": 106,
+    "nome": "Subestação Contagem (Região Metropolitana)",
+    "localizacao": "Eldorado, Contagem - MG",
+    "coordenadas": {
+      "latitude": -19.9317,
+      "longitude": -44.0536
+    },
+    "risco_atual": "Moderado",
+    "ultima_atualizacao": "2025-12-04T10:05:00Z"
+  },
+  {
+    "id": 107,
+    "nome": "Centro de Distribuição Betim (Região Metropolitana)",
+    "localizacao": "Centro, Betim - MG",
+    "coordenadas": {
+      "latitude": -19.9678,
+      "longitude": -44.1983
+    },
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:06:00Z"
+  },
+  {
+    "id": 108,
+    "nome": "Data Center Lourdes",
+    "localizacao": "Lourdes, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9267,
+      "longitude": -43.9450
+    },
+    "risco_atual": "Alto",
+    "ultima_atualizacao": "2025-12-04T10:07:00Z",
+    "tempo_estimado_impacto": "2 horas",
+    "acoes_contingencia": [
+      "Monitorar sistemas críticos.",
+      "Preparar equipe de contingência.",
+      "Verificar sistemas de drenagem do edifício."
+    ]
+  },
+  {
+    "id": 109,
+    "nome": "Estação de Bombeamento Ribeirão Arrudas",
+    "localizacao": "Lagoinha, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9089,
+      "longitude": -43.9378
+    },
+    "risco_atual": "Crítico",
+    "ultima_atualizacao": "2025-12-04T10:08:00Z",
+    "tempo_estimado_impacto": "30 minutos",
+    "acoes_contingencia": [
+      "Ativar bombas de emergência imediatamente.",
+      "Evacuar área de risco.",
+      "Acionar Defesa Civil municipal.",
+      "Monitorar nível do Ribeirão Arrudas em tempo real."
+    ]
+  },
+  {
+    "id": 110,
+    "nome": "Subestação Belvedere",
+    "localizacao": "Belvedere, Belo Horizonte - MG",
+    "coordenadas": {
+      "latitude": -19.9756,
+      "longitude": -43.9511
+    },
+    "risco_atual": "Baixo",
+    "ultima_atualizacao": "2025-12-04T10:09:00Z"
+  }
+]
