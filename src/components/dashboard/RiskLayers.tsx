@@ -92,7 +92,7 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
             <Tooltip
               sticky
               direction="top"
-              className="bg-zinc-950/90 border-zinc-800 text-white font-mono text-[10px] rounded-md shadow-2xl"
+              className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
             >
               <div className="flex flex-col gap-1 p-1">
                 <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
