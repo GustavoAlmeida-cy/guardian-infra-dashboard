@@ -1,6 +1,7 @@
 import { Polygon, Tooltip, useMapEvents } from "react-leaflet";
 import { useState, useMemo } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
+import { getSnappedCenter } from "@/utils/grid"; // Certifique-se de que o caminho está correto
 import type { Asset, RiskLevel } from "@/@types/asset";
 
 const RISK_COLORS: Record<RiskLevel, string> = {
@@ -10,7 +11,9 @@ const RISK_COLORS: Record<RiskLevel, string> = {
   Baixo: "#10b981",
 };
 
-const HEX_RADIUS = 0.005;
+// Importante: O raio aqui deve ser o mesmo (ou ligeiramente menor) que o GRID_SIZE do seu utilitário
+const HEX_RADIUS = 0.0035;
+const ZOOM_THRESHOLD = 16;
 
 const getHexagonPoints = (
   lat: number,
@@ -47,21 +50,17 @@ function AssetHexagon({
   const isCritical = asset.risco_atual === "Crítico";
   const color = RISK_COLORS[asset.risco_atual];
 
-  const points = useMemo(
-    () =>
-      getHexagonPoints(
-        asset.coordenadas.latitude,
-        asset.coordenadas.longitude,
-        HEX_RADIUS
-      ),
-    [asset.coordenadas.latitude, asset.coordenadas.longitude]
-  );
+  // Lógica de Grid: Calcula o centro da malha para este asset
+  const points = useMemo(() => {
+    const [snappedLat, snappedLng] = getSnappedCenter(
+      asset.coordenadas.latitude,
+      asset.coordenadas.longitude
+    );
+    return getHexagonPoints(snappedLat, snappedLng, HEX_RADIUS);
+  }, [asset.coordenadas.latitude, asset.coordenadas.longitude]);
 
-  // Lógica de peso dinâmica
   const weight = useMemo(() => {
-    // Se o mapa estiver movendo, reduzimos o peso para quase zero ou zero
     if (isMapMoving) return 0.5;
-
     const baseWeight = zoom > 12 ? 1 : zoom > 8 ? 1.5 : 2;
     if (isSelected) return baseWeight + 2;
     if (isCritical) return baseWeight + 1;
@@ -75,44 +74,45 @@ function AssetHexagon({
       interactive={true}
       pathOptions={{
         fillColor: color,
-        fillOpacity: isSelected ? 0.7 : isCritical ? 0.4 : 0.2,
-        // ESTRATÉGIA: Se estiver movendo, a borda assume a cor do preenchimento (disfarça o estouro)
-        // O branco só aparece quando o mapa para (isMapMoving === false)
+        // Opacidade aumenta conforme o zoom aproxima para dar o aspecto de malha sólida
+        fillOpacity: isSelected ? 0.7 : zoom >= ZOOM_THRESHOLD - 3 ? 0.5 : 0.2,
         color: isMapMoving ? color : isSelected ? "#ffffff" : color,
         weight: weight,
-        // Esconde a opacidade da borda durante o zoom para evitar o serrilhado branco
         opacity: isMapMoving ? 0.2 : isSelected ? 1 : 0.6,
         lineJoin: "round",
         className: `
           leaflet-interactive
-          transition-opacity duration-500
+          transition-all duration-500
           ${isCritical ? "animate-pulse" : ""} 
           ${isSelected && !isMapMoving ? "drop-shadow-white-glow" : ""}
           ${isMapMoving ? "blur-[1px]" : "blur-0"} 
         `,
       }}
     >
-      <Tooltip
-        sticky
-        direction="top"
-        className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
-      >
-        <div className="flex flex-col gap-1 p-1">
-          <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
-            {isCritical ? "⚠️ ALERTA" : "NORMAL"}
-          </span>
-          <span className="font-bold border-b border-white/10 pb-1">
-            {asset.nome}
-          </span>
-          <span className="flex items-center gap-1.5 mt-1 font-bold">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            {asset.risco_atual.toUpperCase()}
-          </span>
-        </div>
-      </Tooltip>
+      {/* O Tooltip do polígono só ativa quando o marcador some para evitar duplicidade */}
+      {zoom >= ZOOM_THRESHOLD - 3 && (
+        <Tooltip
+          sticky
+          direction="top"
+          className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
+        >
+          <div className="flex flex-col gap-1 p-1">
+            <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
+              {isCritical ? "⚠️ ALERTA" : "NORMAL"}
+            </span>
+            <span className="font-bold border-b border-white/10 pb-1">
+              {asset.nome}
+            </span>
+            <span className="flex items-center gap-1.5 mt-1 font-bold">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              {asset.risco_atual.toUpperCase()}
+            </span>
+          </div>
+        </Tooltip>
+      )}
     </Polygon>
   );
 }

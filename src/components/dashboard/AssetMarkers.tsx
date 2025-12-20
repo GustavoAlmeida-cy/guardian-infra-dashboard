@@ -2,6 +2,7 @@ import { Marker, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { useCallback, useState } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
+import { getSnappedCenter } from "@/utils/grid"; // Importando seu utilitário
 import type { Asset, RiskLevel } from "@/@types/asset";
 
 const RISK_COLORS: Record<RiskLevel, string> = {
@@ -11,7 +12,6 @@ const RISK_COLORS: Record<RiskLevel, string> = {
   Baixo: "#10b981",
 };
 
-// Quando o zoom for 16 ou maior, o marcador desaparece para mostrar apenas o polígono
 const ZOOM_THRESHOLD = 16;
 
 export function AssetMarkers({ assets }: { assets: Asset[] }) {
@@ -46,9 +46,8 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
     });
   }, []);
 
-  // LÓGICA DE VISIBILIDADE:
-  // Se o zoom for maior ou igual ao limite, não renderizamos nada (visibilidade zero)
-  if (zoom >= (ZOOM_THRESHOLD - 3)) return null;
+  // Se o zoom for maior ou igual ao limite ajustado, removemos os markers
+  if (zoom >= ZOOM_THRESHOLD - 2) return null;
 
   return (
     <>
@@ -56,10 +55,16 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
         const color = RISK_COLORS[asset.risco_atual];
         const isCritical = asset.risco_atual === "Crítico";
 
+        // CENTRALIZAÇÃO: Usando o utilitário para alinhar o Marker com a Grid do Polígono
+        const snappedPosition = getSnappedCenter(
+          asset.coordenadas.latitude,
+          asset.coordenadas.longitude
+        );
+
         return (
           <Marker
             key={`marker-${asset.id}`}
-            position={[asset.coordenadas.latitude, asset.coordenadas.longitude]}
+            position={snappedPosition} // Agora o marker nasce no centro do hexágono
             icon={getIcon(asset.risco_atual)}
             eventHandlers={{ click: () => setSelectedAsset(asset) }}
           >
