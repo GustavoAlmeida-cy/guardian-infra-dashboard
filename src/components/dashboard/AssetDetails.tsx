@@ -1,324 +1,185 @@
-import { useMemo, useState } from "react";
+"use client";
+
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-import { TacticalToast } from "@/components/dashboard/TacticalToast";
 import {
   X,
   Zap,
   ShieldCheck,
   Clock,
-  Info,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  Minus,
   MapPin,
   Copy,
   Check,
-  Terminal,
+  AlertOctagon,
 } from "lucide-react";
-import { useAssetStore } from "@/store/useAssetStore";
+import { useAssetActions } from "@/hooks/useAssetActions";
 import { Button } from "@/components/ui/button";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
-
-// FUNÇÃO RESTAURADA: Resolve o erro "Cannot find name 'generateForecastData'"
-const generateForecastData = (baseRisk: string) => {
-  const multiplier =
-    baseRisk === "Crítico" ? 1.2 : baseRisk === "Alto" ? 1.0 : 0.6;
-  return [
-    { time: "08:00", risk: Math.floor(20 * multiplier) },
-    { time: "10:00", risk: Math.floor(45 * multiplier) },
-    { time: "12:00", risk: Math.floor(85 * multiplier) },
-    { time: "14:00", risk: Math.floor(65 * multiplier) },
-    { time: "16:00", risk: Math.floor(40 * multiplier) },
-    { time: "18:00", risk: Math.floor(25 * multiplier) },
-  ];
-};
+import { MetricCard, CommandButton } from "@/components/dashboard/TacticalBase";
+import { ForecastChart } from "@/components/dashboard/ForecastChart";
 
 export function AssetDetails() {
-  const { selectedAsset, setSelectedAsset } = useAssetStore();
-  const [copied, setCopied] = useState(false);
-
-  const riskTheme = useMemo(() => {
-    if (!selectedAsset) return null;
-    switch (selectedAsset.risco_atual) {
-      case "Crítico":
-        return { color: "#dc2626", trend: "Alta", icon: TrendingUp };
-      case "Alto":
-        return { color: "#f97316", trend: "Instável", icon: AlertCircle };
-      case "Moderado":
-        return { color: "#eab308", trend: "Estável", icon: Minus };
-      default:
-        return { color: "#10b981", trend: "Baixa", icon: TrendingDown };
-    }
-  }, [selectedAsset]);
-
-  const forecastData = useMemo(
-    () =>
-      selectedAsset ? generateForecastData(selectedAsset.risco_atual) : [],
-    [selectedAsset]
-  );
-
-  const handleAction = () => {
-    if (!selectedAsset) return;
-    toast.custom(() => (
-      <TacticalToast
-        variant="danger"
-        title="Ordem de Resposta Enviada"
-        icon={<Zap size={20} className="fill-current animate-pulse" />}
-        description={`Mobilização imediata para ${selectedAsset.nome}. Unidades em alerta.`}
-      />
-    ));
-  };
-
-  const handleProtocol = () => {
-    if (!selectedAsset) return;
-    toast.custom(() => (
-      <TacticalToast
-        variant="info"
-        title="Protocolo Ativo"
-        icon={<ShieldCheck size={20} />}
-        description={`Auditando Ativo #${selectedAsset.id}. Integridade nominal.`}
-      />
-    ));
-  };
-
-  const handleCopyCoords = () => {
-    if (!selectedAsset) return;
-    const coords = `${selectedAsset.coordenadas.latitude.toFixed(
-      6
-    )}, ${selectedAsset.coordenadas.longitude.toFixed(6)}`;
-    navigator.clipboard.writeText(coords);
-    setCopied(true);
-
-    toast.custom(
-      () => (
-        <TacticalToast
-          variant="success"
-          title="Geo-Link Copiado"
-          icon={<Terminal size={20} />}
-          description={coords}
-        />
-      ),
-      { duration: 2000 }
-    );
-
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const {
+    selectedAsset,
+    setSelectedAsset,
+    riskTheme,
+    forecastData,
+    copied,
+    isProcessing,
+    handleAction,
+    handleProtocol,
+    handleCancel,
+    handleCopyCoords,
+  } = useAssetActions();
 
   if (!selectedAsset || !riskTheme) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div
+    <AnimatePresence mode="wait">
+      <motion.section
+        key={selectedAsset.id}
         initial={{ x: -100, opacity: 0, scale: 0.95 }}
         animate={{ x: 0, opacity: 1, scale: 1 }}
-        exit={{
-          x: -100,
-          opacity: 0,
-          scale: 0.95,
-          transition: { duration: 0.2 },
-        }}
-        transition={{ type: "spring", damping: 20, stiffness: 100 }}
-        className="absolute top-6 left-6 w-100 bg-zinc-950/95 border border-zinc-800/50 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden font-sans"
+        exit={{ x: -100, opacity: 0, scale: 0.95 }}
+        className="absolute top-6 left-6 w-96 bg-zinc-950/95 border border-zinc-800/50 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden font-sans"
       >
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          className="h-1.5"
+        {/* Barra de Status: Branca durante validação, Risco no estado normal */}
+        <div
+          className="h-1.5 w-full transition-all duration-500 ease-in-out"
           style={{
-            backgroundColor: riskTheme.color,
-            boxShadow: `0px 2px 10px ${riskTheme.color}66`,
+            backgroundColor: isProcessing ? "#ffffff" : riskTheme.color,
           }}
         />
 
-        <div className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-2">
-          <div className="space-y-3 text-left">
-            <div className="space-y-1">
-              <h3 className="text-base font-black text-white tracking-tight italic uppercase">
-                {selectedAsset.nome}
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="bg-zinc-800 text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-mono border border-zinc-700">
-                  #{selectedAsset.id}
-                </span>
-                <button
-                  onClick={handleCopyCoords}
-                  className="group flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-800/80 transition-all cursor-pointer"
-                >
-                  <MapPin
-                    size={10}
-                    className="text-zinc-600 group-hover:text-zinc-400"
-                  />
-                  <span className="text-[9px] font-mono text-zinc-500 group-hover:text-zinc-300">
-                    {selectedAsset.coordenadas.latitude.toFixed(6)},{" "}
-                    {selectedAsset.coordenadas.longitude.toFixed(6)}
-                  </span>
-                  <div className="ml-1 border-l border-zinc-800 pl-1.5">
-                    {copied ? (
-                      <Check size={10} className="text-emerald-500" />
-                    ) : (
-                      <Copy
-                        size={10}
-                        className="text-zinc-600 group-hover:text-zinc-400"
-                      />
-                    )}
-                  </div>
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">
-              <Info size={12} style={{ color: riskTheme.color }} />
-              Monitoramento Tático
+        {/* Header */}
+        <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start">
+          <div className="space-y-3">
+            <h3 className="text-base font-black text-white italic uppercase tracking-tight">
+              {selectedAsset.nome}
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="bg-zinc-800 text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-mono border border-zinc-700">
+                ID: {selectedAsset.id}
+              </span>
+              <button
+                onClick={handleCopyCoords}
+                className="flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                <MapPin size={10} />
+                {selectedAsset.coordenadas.latitude.toFixed(4)},{" "}
+                {selectedAsset.coordenadas.longitude.toFixed(4)}
+                {copied ? (
+                  <Check size={10} className="text-emerald-500 ml-1" />
+                ) : (
+                  <Copy size={10} className="ml-1" />
+                )}
+              </button>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
+            disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="h-8 w-8 cursor-pointer rounded-full text-zinc-500 hover:text-white hover:bg-zinc-800/50"
+            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </Button>
-        </div>
+        </header>
 
+        {/* Content */}
         <div className="p-6 space-y-8">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="grid grid-cols-3 gap-4"
-          >
-            {[
-              {
-                label: "Impacto",
-                val: selectedAsset.tempo_estimado_impacto,
-                icon: Clock,
-              },
-              {
-                label: "Severidade",
-                val: selectedAsset.risco_atual,
-                icon: AlertCircle,
-                color: riskTheme.color,
-              },
-              {
-                label: "Tendência",
-                val: riskTheme.trend,
-                icon: riskTheme.icon,
-                color: "#a1a1aa",
-              },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="space-y-2 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/50 text-left"
-              >
-                <span className="text-[9px] text-zinc-500 uppercase font-black flex items-center gap-1">
-                  <item.icon size={10} /> {item.label}
-                </span>
-                <div
-                  className="text-xs font-black italic uppercase tracking-tighter"
-                  style={{ color: item.color || "#fff" }}
-                >
-                  {item.val}
-                </div>
-              </div>
-            ))}
-          </motion.div>
+          <div className="grid grid-cols-3 gap-3">
+            <MetricCard
+              label="Impacto"
+              value={selectedAsset.tempo_estimado_impacto ?? "N/A"}
+              icon={Clock}
+              className="cursor-default"
+            />
+            <MetricCard
+              label="Severidade"
+              value={selectedAsset.risco_atual ?? "Estável"}
+              icon={riskTheme.icon}
+              color={riskTheme.color}
+              className="cursor-default"
+            />
+            <MetricCard
+              label="Tendência"
+              value={riskTheme.trend}
+              icon={riskTheme.icon}
+              color="#a1a1aa"
+              className="cursor-default"
+            />
+          </div>
 
           <div className="space-y-4">
-            <div className="flex justify-between items-end px-1">
-              <span className="text-[10px] text-zinc-400 uppercase tracking-[0.2em] font-black flex items-center gap-2 text-left">
-                <div
-                  className="h-2 w-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: riskTheme.color }}
-                />
-                Análise Preditiva
-              </span>
-            </div>
-            <div className="h-44 w-full bg-zinc-900/20 rounded-lg p-2 border border-zinc-800/30">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={forecastData}>
-                  <defs>
-                    <linearGradient
-                      id="dynamicColor"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor={riskTheme.color}
-                        stopOpacity={0.5}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor={riskTheme.color}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#27272a"
-                    strokeOpacity={0.3}
-                  />
-                  <XAxis
-                    dataKey="time"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 9, fill: "#71717a" }}
-                    dy={10}
-                  />
-                  <YAxis hide domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#09090b",
-                      border: `1px solid ${riskTheme.color}33`,
-                      borderRadius: "8px",
-                      fontSize: "10px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="risk"
-                    stroke={riskTheme.color}
-                    strokeWidth={3}
-                    fill="url(#dynamicColor)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-black flex items-center gap-2">
+              <div
+                className={`h-2 w-2 rounded-full transition-colors duration-500 ${
+                  isProcessing ? "bg-white animate-pulse" : ""
+                }`}
+                style={{
+                  backgroundColor: !isProcessing ? riskTheme.color : undefined,
+                }}
+              />
+              {isProcessing
+                ? "Validação em curso..."
+                : "Projeção de Risco (24h)"}
+            </span>
+
+            {/* Gráfico: Branco durante validação, Risco no estado normal */}
+            <ForecastChart
+              data={forecastData}
+              color={isProcessing ? "#ffffff" : riskTheme.color}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <Button
-              onClick={handleAction}
-              className="group relative text-white text-[11px] font-black h-11 transition-all overflow-hidden border-none active:scale-95 cursor-pointer shadow-lg"
-              style={{ backgroundColor: riskTheme.color }}
-            >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-              <Zap size={16} className="mr-2 fill-current animate-pulse" />
-              ACIONAR RESPOSTA
-            </Button>
-            <Button
-              onClick={handleProtocol}
-              variant="outline"
-              className="border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 text-[11px] font-black h-11 text-zinc-400 hover:text-white transition-all active:scale-95 cursor-pointer"
-            >
-              <ShieldCheck size={16} className="mr-2" /> PROTOCOLO
-            </Button>
-          </div>
+          <footer className="relative h-11">
+            <AnimatePresence mode="wait">
+              {!isProcessing ? (
+                <motion.div
+                  key="actions"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <CommandButton
+                    onClick={handleAction}
+                    icon={Zap}
+                    color={riskTheme.color}
+                    className="cursor-pointer"
+                  >
+                    ACIONAR RESPOSTA
+                  </CommandButton>
+
+                  <CommandButton
+                    onClick={handleProtocol}
+                    icon={ShieldCheck}
+                    variant="outline"
+                    className="cursor-pointer"
+                  >
+                    PROTOCOLO
+                  </CommandButton>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="cancel"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                >
+                  <Button
+                    onClick={handleCancel}
+                    className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-black uppercase italic tracking-tighter text-[11px] rounded-lg transition-all border-none shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer"
+                  >
+                    <AlertOctagon size={16} className="mr-2 animate-bounce" />
+                    CANCELAR OPERAÇÃO IMEDIATAMENTE
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </footer>
         </div>
-      </motion.div>
+      </motion.section>
     </AnimatePresence>
   );
 }

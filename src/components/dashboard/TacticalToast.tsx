@@ -1,30 +1,26 @@
 /**
  * @file TacticalToast.tsx
- * @description Componente de notificação (Toast) estilizado para operações críticas.
- * Implementa fechamento manual e visual tático.
  */
 
 import type { ReactNode, MouseEvent } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 
 interface TacticalToastProps {
+  t: string | number;
   title: string;
   description?: string;
   icon?: ReactNode;
-  variant?: "danger" | "info" | "success" | "warning";
-  onClose?: () => void;
+  variant?: "danger" | "info" | "success" | "warning" | "neutral"; // Adicionado neutral
 }
 
-/**
- * @component TacticalToast
- */
 export function TacticalToast({
+  t,
   title,
   description,
   icon,
   variant = "info",
-  onClose,
 }: TacticalToastProps) {
   // --- CONFIGURAÇÃO DE TEMAS ---
   const variants = {
@@ -56,18 +52,21 @@ export function TacticalToast({
       text: "text-amber-500",
       shadow: "shadow-amber-900/20",
     },
+    neutral: {
+      border: "border-zinc-500/30",
+      bg: "bg-zinc-500/5",
+      accent: "bg-white", // Acento em branco puro
+      text: "text-white", // Título e ícone em branco
+      shadow: "shadow-zinc-900/20",
+    },
   };
 
   const theme = variants[variant];
 
-  /**
-   * Manipulador de fechamento com interrupção de propagação.
-   * Garante que o evento de clique não ative outros elementos abaixo do botão.
-   */
-  const handleClose = (e: MouseEvent) => {
+  const handleDismiss = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onClose) onClose();
+    toast.dismiss(t);
   };
 
   return (
@@ -83,24 +82,21 @@ export function TacticalToast({
         mx-auto md:mx-0 group
       `}
     >
-      {/* Indicador Lateral de Status */}
       <div className={`w-1 ${theme.accent} shrink-0`} />
 
       <div className="flex gap-3 p-4 items-start w-full pr-10">
-        {/* Slot de Ícone */}
         {icon && (
           <div
             className={`
-            flex items-center justify-center shrink-0 
-            w-8 h-8 rounded border border-white/5 
-            ${theme.bg} ${theme.text}
-          `}
+              flex items-center justify-center shrink-0 
+              w-8 h-8 rounded border border-white/5 
+              ${theme.bg} ${theme.text}
+            `}
           >
             {icon}
           </div>
         )}
 
-        {/* Conteúdo Informativo */}
         <div className="flex flex-col gap-1 text-left min-w-0">
           <h4
             className={`text-[10px] font-black uppercase tracking-widest leading-none truncate ${theme.text}`}
@@ -115,22 +111,14 @@ export function TacticalToast({
         </div>
       </div>
 
-      {/* --- BOTÃO DE FECHAMENTO (FIX) --- */}
       <button
         type="button"
-        onClick={handleClose}
-        className="
-          absolute top-2 right-2 z-70
-          p-2 rounded-md cursor-pointer
-          text-zinc-500 hover:text-white hover:bg-white/10
-          transition-all duration-200 active:scale-90
-        "
-        aria-label="Fechar"
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 z-50 p-2 rounded-md cursor-pointer text-zinc-500 hover:text-white hover:bg-white/10 transition-all duration-200"
       >
         <X size={14} />
       </button>
 
-      {/* Efeito Glow Decorativo */}
       <div
         className={`absolute -top-4 -right-4 w-12 h-12 rounded-full blur-2xl opacity-10 ${theme.accent} pointer-events-none z-0`}
       />
