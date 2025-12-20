@@ -156,7 +156,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                   key={asset.id}
                   onClick={() => handleSelectAsset(asset)}
                   className={`${
-                    isMobile ? "w-full" : "w-70"
+                    isMobile ? "w-72" : "w-70"
                   } text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group ${
                     isSelected
                       ? "bg-zinc-900 border-zinc-700 shadow-xl"

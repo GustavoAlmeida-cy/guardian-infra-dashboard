@@ -39,12 +39,12 @@ function InitialBounds({ assets }: { assets: Asset[] }) {
       );
 
       lock();
-      map.fitBounds(bounds, { padding: [100, 100], animate: true });
+      map.fitBounds(bounds, { padding: [40, 40], animate: true }); // Padding menor para mobile
 
       const timer = setTimeout(unlock, 600);
       return () => clearTimeout(timer);
     }
-  }, [assets, map, lock, unlock]); // Agora com dependências estáveis
+  }, [assets, map, lock, unlock]);
 
   return null;
 }
@@ -60,7 +60,7 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
       );
 
       lock();
-      map.fitBounds(bounds, { padding: [70, 70], duration: 1.5 });
+      map.fitBounds(bounds, { padding: [50, 50], duration: 1.5 });
       setTimeout(unlock, 1600);
     } else {
       map.setView([-15.7938, -47.8828], 4);
@@ -68,13 +68,13 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
   };
 
   return (
-    <div className="absolute bottom-6 left-6 z-500 pointer-events-auto">
+    <div className="absolute bottom-8 left-4 md:bottom-6 md:left-6 z-500 pointer-events-auto">
       <button
         onClick={handleZoomOut}
-        className="flex cursor-pointer items-center gap-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-lg transition-all active:scale-95 shadow-2xl group"
+        className="flex cursor-pointer items-center gap-2 bg-zinc-900/95 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 px-4 py-3 md:px-3 md:py-2 rounded-xl md:rounded-lg transition-all active:scale-90 shadow-2xl group"
       >
-        <Maximize size={16} className="group-hover:text-white" />
-        <span className="text-[10px] font-bold uppercase tracking-wider">
+        <Maximize size={18} className="group-hover:text-white" />
+        <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider">
           Visão Geral
         </span>
       </button>
@@ -97,7 +97,7 @@ function ChangeView({ center }: { center: [number, number] }) {
 
       map.once("moveend", unlock);
     }
-  }, [center, map, lock, unlock]); // Dependências corrigidas
+  }, [center, map, lock, unlock]);
 
   return null;
 }
@@ -125,7 +125,7 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
   return (
     <div className="h-full w-full relative group bg-zinc-950 overflow-hidden">
       {/* HUD de Monitoramento */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-500 flex gap-2 md:gap-6 bg-zinc-950/80 backdrop-blur-xl px-4 py-2 border border-zinc-800 rounded-lg shadow-2xl">
+      <div className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-500 gap-6 bg-zinc-950/80 backdrop-blur-xl px-6 py-2 border border-zinc-800 rounded-lg shadow-2xl">
         {Object.entries(stats).map(([level, value]) => {
           const isCritical = level === "Crítico";
           const colorClass = isCritical ? "text-red-500" : "text-zinc-200";
@@ -175,18 +175,17 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
         center={defaultCenter}
         zoom={4}
         zoomControl={false}
+        attributionControl={false}
         className="h-full w-full"
         preferCanvas={true}
       >
-        <TileLayer
-          attribution="&copy; CARTO"
-          url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-        />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" />
+
         <InitialBounds assets={assets} />
         <RiskLayers assets={assets} />
         <AssetMarkers assets={assets} />
+
         <TileLayer
-          attribution="&copy; CARTO"
           url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
           opacity={0.15}
         />
