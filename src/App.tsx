@@ -1,3 +1,9 @@
+/**
+ * GUARDIAN INFRA - CORE APPLICATION
+ * Arquitetura: React 19 + TanStack Query V5 + Zustand
+ * Foco: Monitoramento de infraestrutura tática e resiliência climática.
+ */
+
 import { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence } from "framer-motion";
@@ -6,6 +12,7 @@ import { List, Globe, AlertTriangle } from "lucide-react";
 
 import "leaflet/dist/leaflet.css";
 
+// Components: Dashboard
 import { ScenarioToggle } from "./components/dashboard/ScenarioToggle";
 import { SplashScreen } from "./components/dashboard/SplashScreen";
 import { Sidebar } from "./components/dashboard/Sidebar";
@@ -14,10 +21,12 @@ import { AssetDetailsDrawer } from "./components/dashboard/AssetDetailsDrawer";
 import { MapEngine } from "./components/dashboard/MapEngine";
 import { TacticalToast } from "./components/dashboard/TacticalToast";
 
+// Hooks & State
 import { useAssets } from "./hooks/useAssets";
 import { useAssetStore } from "./store/useAssetStore";
 import type { Asset } from "./@types/asset";
 
+// UI Components
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -26,10 +35,19 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
-const queryClient = new QueryClient();
+// 1. Instância do QueryClient fora para estabilidade de cache
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 2,
+    },
+  },
+});
 
 /**
- * MONITOR DE ALERTAS AUTOMÁTICOS
+ * @component AutomatedAlerts
+ * Gerencia notificações críticas via Toast baseado no estado dos assets.
  */
 function AutomatedAlerts({
   assets,
@@ -42,21 +60,20 @@ function AutomatedAlerts({
 }) {
   const alertedIds = useRef<Set<number | string>>(new Set());
 
-  // Limpa o histórico de alertas quando muda a cidade/fonte
+  // Reseta histórico ao trocar fonte de dados
   useEffect(() => {
     alertedIds.current.clear();
   }, [source]);
 
   useEffect(() => {
-    // Só dispara se a splash screen já sumiu
     if (!isActive) return;
 
     assets.forEach((asset) => {
       const isCritical = asset.risco_atual === "Crítico";
+      const toastId = `critical-${asset.id}`;
 
       if (isCritical && !alertedIds.current.has(asset.id)) {
         alertedIds.current.add(asset.id);
-
         toast.custom(
           () => (
             <TacticalToast
@@ -66,14 +83,11 @@ function AutomatedAlerts({
               description={`Emergência em ${asset.nome}. Inicie protocolos.`}
             />
           ),
-          {
-            duration: 10000,
-            id: `critical-${asset.id}`, // ID único por asset permite múltiplos toasts simultâneos
-          }
+          { duration: 10000, id: toastId }
         );
       } else if (!isCritical && alertedIds.current.has(asset.id)) {
         alertedIds.current.delete(asset.id);
-        toast.dismiss(`critical-${asset.id}`); // Remove o toast se o risco baixar
+        toast.dismiss(toastId);
       }
     });
   }, [assets, isActive]);
@@ -81,6 +95,10 @@ function AutomatedAlerts({
   return null;
 }
 
+/**
+ * @component DashboardContent
+ * Layout principal e lógica de sincronização de dados.
+ */
 function DashboardContent() {
   const { dataSource, selectedAsset, setSelectedAsset, setLastUpdate } =
     useAssetStore();
@@ -91,6 +109,7 @@ function DashboardContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Responsividade: Detecção de Viewport
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
@@ -98,6 +117,7 @@ function DashboardContent() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // UX: Lifecycle da Splash Screen
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -105,24 +125,28 @@ function DashboardContent() {
     }
   }, [isLoading]);
 
+  // Data Sync: Atualiza dados do asset selecionado em tempo real
   useEffect(() => {
     if (assets.length > 0) {
       setLastUpdate(new Date());
+
       if (selectedAsset) {
         const freshData = assets.find((a) => a.id === selectedAsset.id);
-        if (
-          freshData &&
-          JSON.stringify(freshData) !== JSON.stringify(selectedAsset)
-        ) {
+
+        // CORREÇÃO: Removido '.status' inexistente. Compara apenas risco ou string completa
+        if (freshData && freshData.risco_atual !== selectedAsset.risco_atual) {
           setSelectedAsset(freshData);
         }
       }
     }
-  }, [assets, selectedAsset, setSelectedAsset, setLastUpdate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets, selectedAsset?.id]); // Dependência otimizada para evitar loops
 
   return (
-    <div className="relative flex h-screen w-full bg-zinc-950 overflow-hidden text-slate-50 font-sans">
-      {/* O monitor agora sabe se a splash screen terminou (!showSplash) */}
+    <main
+      className="relative flex h-screen w-full bg-zinc-950 overflow-hidden text-slate-50 font-sans selection:bg-red-500/30"
+      aria-label="Painel de Monitoramento Guardian Infra"
+    >
       <AutomatedAlerts
         assets={assets}
         isActive={!showSplash}
@@ -133,7 +157,10 @@ function DashboardContent() {
         {showSplash && <SplashScreen key="splash" />}
       </AnimatePresence>
 
-      <section className="flex-1 relative flex flex-col h-full overflow-hidden">
+      <section
+        className="flex-1 relative flex flex-col h-full overflow-hidden"
+        aria-label="Visualização do Mapa"
+      >
         <AnimatePresence>
           {selectedAsset &&
             (isMobile ? (
@@ -143,24 +170,20 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-6 right-6 z-1001">
+        <div className="absolute top-6 right-6 z-1001" role="complementary">
           <ScenarioToggle />
         </div>
 
         <div className="flex-1 relative z-0">
           {isLoading ? (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950">
-              <div
-                className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 2px 2px, #3f3f46 1px, transparent 0)`,
-                  backgroundSize: "40px 40px",
-                }}
-              />
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950"
+              role="status"
+            >
               <div className="text-center space-y-6 z-20">
                 <Globe className="w-16 h-16 text-zinc-800 animate-pulse mx-auto" />
                 <p className="text-zinc-500 text-[10px] font-mono tracking-[0.3em] uppercase">
-                  Sincronizando Rede Guardian...
+                  Sincronizando Rede...
                 </p>
               </div>
             </div>
@@ -169,13 +192,15 @@ function DashboardContent() {
           )}
         </div>
 
+        {/* Mobile: Acesso rápido via Drawer */}
         {isMobile && (
-          <div className="absolute bottom-8 right-6 z-20">
+          <nav className="absolute bottom-8 right-6 z-20">
             <Drawer>
               <DrawerTrigger asChild>
                 <Button
                   size="icon"
-                  className="h-14 w-14 cursor-pointer rounded-full bg-red-600 hover:bg-red-700 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-none transition-transform active:scale-90"
+                  aria-label="Abrir lista de ativos"
+                  className="h-14 w-14 rounded-full bg-red-600 hover:bg-red-700 shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all active:scale-95 border-none"
                 >
                   <List className="text-white" size={24} />
                 </Button>
@@ -187,16 +212,20 @@ function DashboardContent() {
                 </div>
               </DrawerContent>
             </Drawer>
-          </div>
+          </nav>
         )}
       </section>
 
+      {/* Desktop: Sidebar Fixa */}
       {!isMobile && (
-        <aside className="w-auto border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20">
+        <aside
+          className="w-auto border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20"
+          aria-label="Lista de Ativos e Filtros"
+        >
           <Sidebar assets={assets} />
         </aside>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -206,8 +235,8 @@ export default function App() {
       <Toaster
         position="top-center"
         theme="dark"
-        expand={true} // Permite ver múltiplos alertas empilhados
-        visibleToasts={5} // Mostra até 5 simultâneos
+        expand={true}
+        visibleToasts={5}
         toastOptions={{
           unstyled: true,
           className: "w-full flex justify-center md:justify-end px-4 md:px-6",
