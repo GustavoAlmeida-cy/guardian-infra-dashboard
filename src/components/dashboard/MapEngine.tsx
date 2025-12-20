@@ -1,212 +1,164 @@
+/**
+ * @file MapEngine.tsx
+ * @description Engine geoespacial otimizada com TacticalHUD integrado.
+ * Centraliza o controle de câmera Leaflet e gerencia camadas de ativos e riscos.
+ */
+
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
 import { Maximize } from "lucide-react";
-import type { Asset, RiskLevel } from "@/@types/asset";
+import type { Asset } from "@/@types/asset";
 
+// --- IMPORTAÇÃO DE COMPONENTES DE CAMADA E UI ---
 import { AssetMarkers } from "./AssetMarkers";
 import { RiskLayers } from "./RiskLayers";
+import { TacticalHUD } from "./TacticalHUD";
 
+// --- CONFIGURAÇÕES GLOBAIS ---
+/** Limites máximos do mapa para evitar panning infinito fora do globo */
 const WORLD_BOUNDS = L.latLngBounds([-90, -180], [90, 180]);
 
-/**
- * Hook para gerenciar as permissões do mapa de forma segura
- */
-function useMapInteractions() {
-  const map = useMap();
+// --- HOOKS DE CONTROLE (LOGICA REUTILIZÁVEL) ---
 
-  const setMapEnabled = useCallback(
-    (enabled: boolean) => {
-      if (enabled) {
+/**
+ * @hook useSafeFly
+ * @description Implementa um semáforo de animação.
+ * Bloqueia interações manuais durante transições automáticas de câmera
+ * para prevenir o "congelamento" (freeze) do motor do Leaflet.
+ */
+function useSafeFly() {
+  const map = useMap();
+  const isAnimating = useRef(false);
+
+  const safeFly = useCallback(
+    (
+      bounds: L.LatLngBounds | L.LatLngExpression,
+      isPoint = false,
+      options = {}
+    ) => {
+      if (isAnimating.current) return;
+
+      isAnimating.current = true;
+      map.dragging.disable();
+      map.scrollWheelZoom.disable();
+
+      if (isPoint) {
+        map.flyTo(bounds as L.LatLngExpression, 16, {
+          duration: 1.2,
+          ...options,
+        });
+      } else {
+        map.flyToBounds(bounds as L.LatLngBounds, {
+          padding: [50, 50],
+          duration: 1.5,
+          ...options,
+        });
+      }
+
+      map.once("moveend", () => {
+        isAnimating.current = false;
         map.dragging.enable();
         map.scrollWheelZoom.enable();
-        map.doubleClickZoom.enable();
-      } else {
-        map.dragging.disable();
-        map.scrollWheelZoom.disable();
-        map.doubleClickZoom.disable();
-      }
+      });
     },
     [map]
   );
 
-  return { setMapEnabled };
+  return { safeFly };
 }
 
+// --- SUB-COMPONENTES DE COMPORTAMENTO AUTOMÁTICO ---
+
+/**
+ * @component InitialBounds
+ * @description Calcula o enquadramento ideal para visualizar todos os ativos no primeiro carregamento.
+ */
 function InitialBounds({ assets }: { assets: Asset[] }) {
-  const map = useMap();
-  const { setMapEnabled } = useMapInteractions();
+  const { safeFly } = useSafeFly();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    if (assets.length > 0) {
+    if (assets.length > 0 && !hasInitialized.current) {
       const bounds = L.latLngBounds(
         assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
       );
-
-      setMapEnabled(false);
-      map.fitBounds(bounds, { padding: [40, 40], animate: true });
-
-      // Libera o mapa assim que a animação inicial termina
-      map.once("moveend", () => setMapEnabled(true));
+      safeFly(bounds);
+      hasInitialized.current = true;
     }
-  }, [assets, map, setMapEnabled]);
+  }, [assets, safeFly]);
 
   return null;
 }
 
-function ZoomOutButton({ assets }: { assets: Asset[] }) {
-  const map = useMap();
-  const { setMapEnabled } = useMapInteractions();
-
-  const handleZoomOut = () => {
-    setMapEnabled(false); // Trava imediatamente
-
-    if (assets.length > 0) {
-      const bounds = L.latLngBounds(
-        assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
-      );
-      map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
-    } else {
-      map.flyTo([-15.7938, -47.8828], 4, { duration: 1.5 });
-    }
-
-    // O evento 'moveend' garante que só destrava quando o flyTo termina
-    map.once("moveend", () => setMapEnabled(true));
-  };
-
-  return (
-    <div className="absolute bottom-10 left-4 md:bottom-6 md:left-6 z-500 pointer-events-auto">
-      <button
-        onClick={handleZoomOut}
-        className="flex cursor-pointer items-center gap-2 bg-zinc-900/95 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 px-4 py-3 md:px-3 md:py-2 rounded-xl md:rounded-lg transition-all active:scale-95 shadow-2xl group"
-      >
-        <Maximize size={18} className="group-hover:text-white" />
-        <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider">
-          Visão Geral
-        </span>
-      </button>
-    </div>
-  );
-}
-
+/**
+ * @component ChangeView
+ * @description Escuta mudanças no asset selecionado e move a câmera para o ponto focal.
+ */
 function ChangeView({ center }: { center: [number, number] }) {
-  const map = useMap();
-  const { setMapEnabled } = useMapInteractions();
+  const { safeFly } = useSafeFly();
+  const lastCenter = useRef<string>("");
 
   useEffect(() => {
-    if (center) {
-      setMapEnabled(false);
-      map.flyTo(center, 16, {
-        duration: 1.2,
-        easeLinearity: 0.25,
-      });
-      map.once("moveend", () => setMapEnabled(true));
+    const centerKey = center.join(",");
+    if (center && centerKey !== lastCenter.current) {
+      safeFly(center, true);
+      lastCenter.current = centerKey;
     }
-  }, [center, map, setMapEnabled]);
+  }, [center, safeFly]);
 
   return null;
 }
 
+// --- MOTOR PRINCIPAL ---
+
+/**
+ * @component MapEngine
+ * @description Componente raiz do mapa. Integra TileLayers, HUD tático e camadas dinâmicas.
+ */
 export function MapEngine({ assets }: { assets: Asset[] }) {
   const selectedAsset = useAssetStore((state) => state.selectedAsset);
-  const defaultCenter: [number, number] = [-15.7938, -47.8828];
-
-  const stats = useMemo(() => {
-    const total = assets.length;
-    if (total === 0) return { Crítico: 0, Alto: 0, Moderado: 0, Baixo: 0 };
-    const counts = assets.reduce((acc, asset) => {
-      acc[asset.risco_atual] = (acc[asset.risco_atual] || 0) + 1;
-      return acc;
-    }, {} as Record<RiskLevel, number>);
-
-    return {
-      Crítico: Math.round(((counts["Crítico"] || 0) / total) * 100),
-      Alto: Math.round(((counts["Alto"] || 0) / total) * 100),
-      Moderado: Math.round(((counts["Moderado"] || 0) / total) * 100),
-      Baixo: Math.round(((counts["Baixo"] || 0) / total) * 100),
-    };
-  }, [assets]);
 
   return (
-    <div className="h-full w-full relative group bg-zinc-950 overflow-hidden">
-      {/* HUD de monitoramento */}
-      <div className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-500 gap-6 bg-zinc-950/80 backdrop-blur-xl px-6 py-2 border border-zinc-800 rounded-lg shadow-2xl">
-        {Object.entries(stats).map(([level, value]) => {
-          const isCritical = level === "Crítico";
-          const dotColor = {
-            Baixo: "#10b981",
-            Moderado: "#eab308",
-            Alto: "#f97316",
-            Crítico: "#dc2626",
-          }[level as RiskLevel];
+    <div
+      className="h-full w-full relative bg-zinc-950 overflow-hidden"
+      role="application"
+      aria-label="Painel Geoespacial Guardian Infra"
+    >
+      {/* 1. INTERFACE DE TELEMETRIA (HUD) */}
+      <TacticalHUD assets={assets} />
 
-          return (
-            <div
-              key={level}
-              className="flex items-center gap-3 border-r border-zinc-800/50 pr-4 last:border-0 last:pr-2"
-            >
-              <div
-                className={`w-3 h-1 rounded-full ${
-                  isCritical ? "animate-pulse" : ""
-                }`}
-                style={{
-                  backgroundColor: dotColor,
-                  boxShadow: `0 0 8px ${dotColor}`,
-                }}
-              />
-              <div className="flex flex-col">
-                <span
-                  className={`text-[7px] font-bold uppercase tracking-widest ${
-                    isCritical
-                      ? "text-red-500 italic font-black"
-                      : "text-zinc-500"
-                  }`}
-                >
-                  {level}
-                </span>
-                <span
-                  className={`text-xs font-mono font-bold leading-none ${
-                    isCritical ? "text-red-500" : "text-zinc-200"
-                  }`}
-                >
-                  {value}%
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+      {/* 2. INSTÂNCIA DO MAPA */}
       <MapContainer
-        center={defaultCenter}
+        center={[-15.7938, -47.8828]}
         zoom={4}
         minZoom={3}
         maxZoom={18}
         zoomControl={false}
         attributionControl={false}
         maxBounds={WORLD_BOUNDS}
-        maxBoundsViscosity={1.0}
-        className="h-full w-full"
-        preferCanvas={true}
+        className="h-full w-full outline-none"
+        preferCanvas={true} // Otimização de hardware para renderização de muitos ativos
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
-          noWrap={true}
-          bounds={WORLD_BOUNDS}
-        />
+        {/* Camada Base: Mapa Escuro Estilizado */}
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" />
 
+        {/* Lógica de Câmera e Enquadramento */}
         <InitialBounds assets={assets} />
+
+        {/* Renderização de Dados Geoespaciais */}
         <RiskLayers assets={assets} />
         <AssetMarkers assets={assets} />
 
+        {/* Camada de Rótulos: Renderizada acima dos dados para leitura de nomes/ruas */}
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
-          opacity={0.15}
-          noWrap={true}
-          bounds={WORLD_BOUNDS}
+          opacity={0.3}
+          pane="shadowPane"
         />
 
+        {/* Reatividade à Seleção de Ativo */}
         {selectedAsset?.coordenadas && (
           <ChangeView
             center={[
@@ -216,8 +168,43 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
           />
         )}
 
+        {/* 3. CONTROLES DE INTERFACE (UI FLUTUANTE) */}
         <ZoomOutButton assets={assets} />
       </MapContainer>
+    </div>
+  );
+}
+
+/**
+ * @component ZoomOutButton
+ * @description Botão de ação rápida para resetar a visão do mapa para a escala global dos ativos.
+ */
+function ZoomOutButton({ assets }: { assets: Asset[] }) {
+  const { safeFly } = useSafeFly();
+
+  return (
+    <div className="absolute bottom-10 left-4 md:bottom-6 md:left-6 z-500">
+      <button
+        onClick={() => {
+          const bounds =
+            assets.length > 0
+              ? L.latLngBounds(
+                  assets.map((a) => [
+                    a.coordenadas.latitude,
+                    a.coordenadas.longitude,
+                  ])
+                )
+              : WORLD_BOUNDS;
+          safeFly(bounds);
+        }}
+        className="flex cursor-pointer items-center gap-2 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 py-2 rounded-lg 
+                   hover:bg-zinc-800 hover:text-white transition-all active:scale-95 shadow-lg group"
+      >
+        <Maximize size={14} className="group-hover:text-white" />
+        <span className="text-[10px] font-bold uppercase tracking-widest">
+          Geral
+        </span>
+      </button>
     </div>
   );
 }

@@ -60,7 +60,6 @@ function AutomatedAlerts({
 }) {
   const alertedIds = useRef<Set<number | string>>(new Set());
 
-  // Reseta histórico ao trocar fonte de dados
   useEffect(() => {
     alertedIds.current.clear();
   }, [source]);
@@ -74,13 +73,16 @@ function AutomatedAlerts({
 
       if (isCritical && !alertedIds.current.has(asset.id)) {
         alertedIds.current.add(asset.id);
+
+        // CORREÇÃO: Passamos o t (toast instance) para poder chamar o dismiss no onClose
         toast.custom(
-          () => (
+          (t) => (
             <TacticalToast
               variant="danger"
               title="SISTEMA: RISCO CRÍTICO"
               icon={<AlertTriangle size={18} className="animate-pulse" />}
               description={`Emergência em ${asset.nome}. Inicie protocolos.`}
+              onClose={() => toast.dismiss(t)} // <--- AGORA O BOTÃO VAI FUNCIONAR
             />
           ),
           { duration: 10000, id: toastId }

@@ -1,10 +1,24 @@
+/**
+ * @file AssetMarkers.tsx
+ * @description Gerencia a renderização de marcadores pontuais de ativos.
+ * Inclui lógica de snapping para alinhamento com a grade de hexágonos e
+ * controle de visibilidade baseado no nível de zoom.
+ */
+
 import { Marker, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { useCallback, useState } from "react";
+import { useCallback, useState, memo } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
-import { getSnappedCenter } from "@/utils/grid"; // Importando seu utilitário
+import { getSnappedCenter } from "@/utils/grid";
 import type { Asset, RiskLevel } from "@/@types/asset";
+import {
+  TacticalTooltipContent,
+  TACTICAL_TOOLTIP_CLASS,
+} from "./TacticalTooltip";
 
+/**
+ * Cores de risco consistentes com o design system tático.
+ */
 const RISK_COLORS: Record<RiskLevel, string> = {
   Crítico: "#dc2626",
   Alto: "#f97316",
@@ -12,18 +26,30 @@ const RISK_COLORS: Record<RiskLevel, string> = {
   Baixo: "#10b981",
 };
 
+/**
+ * @constant ZOOM_THRESHOLD
+ * Define o ponto onde os marcadores dão lugar à malha de hexágonos.
+ */
 const ZOOM_THRESHOLD = 16;
 
-export function AssetMarkers({ assets }: { assets: Asset[] }) {
+export const AssetMarkers = memo(({ assets }: { assets: Asset[] }) => {
   const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
   const [zoom, setZoom] = useState(5);
 
+  /**
+   * Monitora o zoom do mapa para controlar a densidade visual.
+   */
   const map = useMapEvents({
     zoomend: () => {
       setZoom(map.getZoom());
     },
   });
 
+  /**
+   * @function getIcon
+   * Gera um ícone Leaflet customizado usando classes Tailwind.
+   * SEO/A11y: O marcador utiliza elementos visuais que indicam status sem depender apenas de cor.
+   */
   const getIcon = useCallback((risk: RiskLevel) => {
     const isCritical = risk === "Crítico";
     const color = RISK_COLORS[risk];
@@ -31,14 +57,14 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
     return L.divIcon({
       className: "custom-marker-container",
       html: `
-        <div class="relative flex items-center justify-center transition-all duration-500">
+        <div class="relative flex items-center justify-center transition-all duration-500" role="img" aria-label="Status: ${risk}">
           ${
             isCritical
               ? `<div class="absolute h-8 w-8 rounded-full bg-red-600/20 animate-ping"></div>`
               : ""
           }
-          <div class="absolute h-6 w-6 rounded-full blur-md" style="background-color: ${color}60"></div>
-          <div class="relative h-3.5 w-3.5 rounded-full border-[1.5px] border-white shadow-2xl transition-transform duration-300 hover:scale-150" 
+          <div class="absolute h-6 w-6 rounded-full blur-md opacity-40" style="background-color: ${color}"></div>
+          <div class="relative h-3.5 w-3.5 rounded-full border-[1.5px] border-white shadow-lg transition-transform duration-300 hover:scale-150" 
                style="background-color: ${color}; box-shadow: 0 0 10px ${color}80"></div>
         </div>`,
       iconSize: [20, 20],
@@ -46,16 +72,20 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
     });
   }, []);
 
-  // Se o zoom for maior ou igual ao limite ajustado, removemos os markers
+  /**
+   * Otimização de Performance:
+   * Se o zoom for alto, desmontamos os marcadores para aliviar o DOM,
+   * já que a RiskLayer (hexágonos) assume a representação visual.
+   */
   if (zoom >= ZOOM_THRESHOLD - 2) return null;
 
   return (
     <>
       {assets.map((asset) => {
-        const color = RISK_COLORS[asset.risco_atual];
-        const isCritical = asset.risco_atual === "Crítico";
-
-        // CENTRALIZAÇÃO: Usando o utilitário para alinhar o Marker com a Grid do Polígono
+        /**
+         * Lógica de Alinhamento (Snapping):
+         * Garante que o marcador esteja exatamente no centro matemático do hexágono da grade.
+         */
         const snappedPosition = getSnappedCenter(
           asset.coordenadas.latitude,
           asset.coordenadas.longitude
@@ -64,35 +94,31 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
         return (
           <Marker
             key={`marker-${asset.id}`}
-            position={snappedPosition} // Agora o marker nasce no centro do hexágono
+            position={snappedPosition}
             icon={getIcon(asset.risco_atual)}
-            eventHandlers={{ click: () => setSelectedAsset(asset) }}
+            eventHandlers={{
+              click: () => setSelectedAsset(asset),
+            }}
           >
+            {/* INTEGRAÇÃO: Tooltip Padronizado
+                Consome o componente TacticalTooltipContent para paridade visual com os hexágonos.
+            */}
             <Tooltip
               sticky
               direction="top"
               offset={[0, -10]}
-              className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
+              className={TACTICAL_TOOLTIP_CLASS}
             >
-              <div className="flex flex-col gap-1 p-1">
-                <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
-                  {isCritical ? "⚠️ ALERTA" : "NORMAL"}
-                </span>
-                <span className="font-bold border-b border-white/10 pb-1">
-                  {asset.nome}
-                </span>
-                <span className="flex items-center gap-1.5 mt-1 font-bold">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: color }}
-                  />
-                  {asset.risco_atual.toUpperCase()}
-                </span>
-              </div>
+              <TacticalTooltipContent
+                nome={asset.nome}
+                risco={asset.risco_atual}
+              />
             </Tooltip>
           </Marker>
         );
       })}
     </>
   );
-}
+});
+
+AssetMarkers.displayName = "AssetMarkers";

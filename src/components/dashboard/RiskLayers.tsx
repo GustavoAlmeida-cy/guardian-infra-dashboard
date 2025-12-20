@@ -1,20 +1,41 @@
-import { Polygon, Tooltip, useMapEvents } from "react-leaflet";
-import { useState, useMemo } from "react";
-import { useAssetStore } from "@/store/useAssetStore";
-import { getSnappedCenter } from "@/utils/grid"; // Certifique-se de que o caminho está correto
-import type { Asset, RiskLevel } from "@/@types/asset";
+/**
+ * @file RiskLayers.tsx
+ * @description Renderiza a camada de grade hexagonal tática sobre o mapa.
+ * Utiliza otimizações de renderização para garantir fluidez mesmo com grande volume de dados.
+ */
 
-const RISK_COLORS: Record<RiskLevel, string> = {
+import { Polygon, Tooltip, useMapEvents } from "react-leaflet";
+import { useState, useMemo, memo } from "react";
+import { useAssetStore } from "@/store/useAssetStore";
+import { getSnappedCenter } from "@/utils/grid";
+import type { Asset } from "@/@types/asset";
+import {
+  TacticalTooltipContent,
+  TACTICAL_TOOLTIP_CLASS,
+} from "./TacticalTooltip";
+
+/**
+ * Cores semânticas baseadas no nível de risco para consistência visual.
+ */
+const RISK_COLORS = {
   Crítico: "#dc2626",
   Alto: "#f97316",
   Moderado: "#eab308",
   Baixo: "#10b981",
 };
 
-// Importante: O raio aqui deve ser o mesmo (ou ligeiramente menor) que o GRID_SIZE do seu utilitário
+/**
+ * Configurações da Grid Tática
+ * @constant HEX_RADIUS Define o tamanho da célula do hexágono.
+ * @constant ZOOM_THRESHOLD Define em qual nível de zoom a grade se torna detalhada.
+ */
 const HEX_RADIUS = 0.0035;
 const ZOOM_THRESHOLD = 16;
 
+/**
+ * Calcula os vértices de um hexágono regular.
+ * Aplica uma correção de aspecto baseada na latitude para evitar deformação (achatamento).
+ */
 const getHexagonPoints = (
   lat: number,
   lng: number,
@@ -34,95 +55,88 @@ const getHexagonPoints = (
   return points;
 };
 
-function AssetHexagon({
-  asset,
-  zoom,
-  isSelected,
-  onSelect,
-  isMapMoving,
-}: {
-  asset: Asset;
-  zoom: number;
-  isSelected: boolean;
-  onSelect: (asset: Asset) => void;
-  isMapMoving: boolean;
-}) {
-  const isCritical = asset.risco_atual === "Crítico";
-  const color = RISK_COLORS[asset.risco_atual];
+/**
+ * Componente de Hexágono Individual (Memoizado)
+ * O uso de 'memo' evita re-renderizações desnecessárias quando o mapa se move
+ * mas os dados do asset não mudaram.
+ */
+const AssetHexagon = memo(
+  ({
+    asset,
+    zoom,
+    isSelected,
+    onSelect,
+    isMapMoving,
+  }: {
+    asset: Asset;
+    zoom: number;
+    isSelected: boolean;
+    onSelect: (asset: Asset) => void;
+    isMapMoving: boolean;
+  }) => {
+    const isCritical = asset.risco_atual === "Crítico";
+    const color = RISK_COLORS[asset.risco_atual];
 
-  // Lógica de Grid: Calcula o centro da malha para este asset
-  const points = useMemo(() => {
-    const [snappedLat, snappedLng] = getSnappedCenter(
-      asset.coordenadas.latitude,
-      asset.coordenadas.longitude
+    /**
+     * Calcula a geometria do hexágono apenas se a coordenada mudar.
+     * getSnappedCenter garante que o hexágono se alinhe perfeitamente à malha global.
+     */
+    const points = useMemo(() => {
+      const [snappedLat, snappedLng] = getSnappedCenter(
+        asset.coordenadas.latitude,
+        asset.coordenadas.longitude
+      );
+      return getHexagonPoints(snappedLat, snappedLng, HEX_RADIUS);
+    }, [asset.coordenadas.latitude, asset.coordenadas.longitude]);
+
+    return (
+      <Polygon
+        positions={points}
+        eventHandlers={{ click: () => onSelect(asset) }}
+        pathOptions={{
+          fillColor: color,
+          // A opacidade aumenta conforme o usuário se aproxima do asset
+          fillOpacity: isSelected
+            ? 0.7
+            : zoom >= ZOOM_THRESHOLD - 3
+            ? 0.5
+            : 0.2,
+          color: isMapMoving ? color : isSelected ? "#ffffff" : color,
+          // Ajuste dinâmico de espessura para feedback visual de seleção e risco
+          weight: isMapMoving ? 0.5 : isSelected ? 3 : isCritical ? 2 : 1,
+          opacity: isMapMoving ? 0.2 : isSelected ? 1 : 0.6,
+        }}
+      >
+        {/* Tooltip Unificado: Renderizado apenas em níveis de zoom próximos para performance */}
+        {zoom >= ZOOM_THRESHOLD - 3 && (
+          <Tooltip sticky direction="top" className={TACTICAL_TOOLTIP_CLASS}>
+            <TacticalTooltipContent
+              nome={asset.nome}
+              risco={asset.risco_atual}
+            />
+          </Tooltip>
+        )}
+      </Polygon>
     );
-    return getHexagonPoints(snappedLat, snappedLng, HEX_RADIUS);
-  }, [asset.coordenadas.latitude, asset.coordenadas.longitude]);
+  }
+);
 
-  const weight = useMemo(() => {
-    if (isMapMoving) return 0.5;
-    const baseWeight = zoom > 12 ? 1 : zoom > 8 ? 1.5 : 2;
-    if (isSelected) return baseWeight + 2;
-    if (isCritical) return baseWeight + 1;
-    return baseWeight;
-  }, [zoom, isSelected, isCritical, isMapMoving]);
+AssetHexagon.displayName = "AssetHexagon";
 
-  return (
-    <Polygon
-      positions={points}
-      eventHandlers={{ click: () => onSelect(asset) }}
-      interactive={true}
-      pathOptions={{
-        fillColor: color,
-        // Opacidade aumenta conforme o zoom aproxima para dar o aspecto de malha sólida
-        fillOpacity: isSelected ? 0.7 : zoom >= ZOOM_THRESHOLD - 3 ? 0.5 : 0.2,
-        color: isMapMoving ? color : isSelected ? "#ffffff" : color,
-        weight: weight,
-        opacity: isMapMoving ? 0.2 : isSelected ? 1 : 0.6,
-        lineJoin: "round",
-        className: `
-          leaflet-interactive
-          transition-all duration-500
-          ${isCritical ? "animate-pulse" : ""} 
-          ${isSelected && !isMapMoving ? "drop-shadow-white-glow" : ""}
-          ${isMapMoving ? "blur-[1px]" : "blur-0"} 
-        `,
-      }}
-    >
-      {/* O Tooltip do polígono só ativa quando o marcador some para evitar duplicidade */}
-      {zoom >= ZOOM_THRESHOLD - 3 && (
-        <Tooltip
-          sticky
-          direction="top"
-          className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
-        >
-          <div className="flex flex-col gap-1 p-1">
-            <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
-              {isCritical ? "⚠️ ALERTA" : "NORMAL"}
-            </span>
-            <span className="font-bold border-b border-white/10 pb-1">
-              {asset.nome}
-            </span>
-            <span className="flex items-center gap-1.5 mt-1 font-bold">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              {asset.risco_atual.toUpperCase()}
-            </span>
-          </div>
-        </Tooltip>
-      )}
-    </Polygon>
-  );
-}
-
+/**
+ * Gerenciador das camadas de risco (RiskLayers)
+ * Escuta eventos do mapa para otimizar a renderização durante interações.
+ */
 export function RiskLayers({ assets }: { assets: Asset[] }) {
   const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
   const selectedAsset = useAssetStore((state) => state.selectedAsset);
   const [zoom, setZoom] = useState(5);
   const [isMapMoving, setIsMapMoving] = useState(false);
 
+  /**
+   * Hook para monitorar o estado do mapa.
+   * Reduzimos a complexidade visual (isMapMoving) durante o arraste para manter 60 FPS.
+   */
   const map = useMapEvents({
     zoomstart: () => setIsMapMoving(true),
     movestart: () => setIsMapMoving(true),
