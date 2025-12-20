@@ -143,7 +143,7 @@ function DashboardContent() {
       </section>
 
       {!isMobile && (
-        <aside className="w-96 border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20">
+        <aside className="w-auto border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20">
           <Sidebar assets={assets} />
         </aside>
       )}
