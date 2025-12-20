@@ -36,11 +36,13 @@ function AssetHexagon({
   zoom,
   isSelected,
   onSelect,
+  isMapMoving,
 }: {
   asset: Asset;
   zoom: number;
   isSelected: boolean;
   onSelect: (asset: Asset) => void;
+  isMapMoving: boolean;
 }) {
   const isCritical = asset.risco_atual === "Crítico";
   const color = RISK_COLORS[asset.risco_atual];
@@ -55,31 +57,38 @@ function AssetHexagon({
     [asset.coordenadas.latitude, asset.coordenadas.longitude]
   );
 
+  // Lógica de peso dinâmica
   const weight = useMemo(() => {
+    // Se o mapa estiver movendo, reduzimos o peso para quase zero ou zero
+    if (isMapMoving) return 0.5;
+
     const baseWeight = zoom > 12 ? 1 : zoom > 8 ? 1.5 : 2;
     if (isSelected) return baseWeight + 2;
     if (isCritical) return baseWeight + 1;
     return baseWeight;
-  }, [zoom, isSelected, isCritical]);
+  }, [zoom, isSelected, isCritical, isMapMoving]);
 
   return (
     <Polygon
       positions={points}
       eventHandlers={{ click: () => onSelect(asset) }}
-      // Adicionado explicitamente para evitar drift no zoom
       interactive={true}
       pathOptions={{
         fillColor: color,
         fillOpacity: isSelected ? 0.7 : isCritical ? 0.4 : 0.2,
-        color: isSelected ? "#ffffff" : color,
+        // ESTRATÉGIA: Se estiver movendo, a borda assume a cor do preenchimento (disfarça o estouro)
+        // O branco só aparece quando o mapa para (isMapMoving === false)
+        color: isMapMoving ? color : isSelected ? "#ffffff" : color,
         weight: weight,
-        opacity: isSelected ? 1 : 0.6,
+        // Esconde a opacidade da borda durante o zoom para evitar o serrilhado branco
+        opacity: isMapMoving ? 0.2 : isSelected ? 1 : 0.6,
         lineJoin: "round",
-        // IMPORTANTE: Removido qualquer transição CSS que cause o "atraso" visual
         className: `
           leaflet-interactive
+          transition-opacity duration-500
           ${isCritical ? "animate-pulse" : ""} 
-          ${isSelected ? "drop-shadow-white-glow" : ""}
+          ${isSelected && !isMapMoving ? "drop-shadow-white-glow" : ""}
+          ${isMapMoving ? "blur-[1px]" : "blur-0"} 
         `,
       }}
     >
@@ -88,7 +97,6 @@ function AssetHexagon({
         direction="top"
         className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
       >
-        {/* ... conteúdo do tooltip igual ... */}
         <div className="flex flex-col gap-1 p-1">
           <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
             {isCritical ? "⚠️ ALERTA" : "NORMAL"}
@@ -112,14 +120,19 @@ function AssetHexagon({
 export function RiskLayers({ assets }: { assets: Asset[] }) {
   const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
   const selectedAsset = useAssetStore((state) => state.selectedAsset);
-
-  // UseMapEvents configurado para atualizar o zoom de forma mais suave
   const [zoom, setZoom] = useState(5);
+  const [isMapMoving, setIsMapMoving] = useState(false);
+
   const map = useMapEvents({
-    zoomend: () => setZoom(map.getZoom()),
-    // Forçar o redesenho dos vetores no final da animação para garantir alinhamento
+    zoomstart: () => setIsMapMoving(true),
+    movestart: () => setIsMapMoving(true),
+    zoomend: () => {
+      setZoom(map.getZoom());
+      setIsMapMoving(false);
+    },
     moveend: () => {
       setZoom(map.getZoom());
+      setIsMapMoving(false);
     },
   });
 
@@ -127,11 +140,12 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
     <>
       {assets.map((asset) => (
         <AssetHexagon
-          key={`hex-${asset.id}`} // Removido risco da key para evitar recriação desnecessária
+          key={`hex-${asset.id}`}
           asset={asset}
           zoom={zoom}
           isSelected={selectedAsset?.id === asset.id}
           onSelect={setSelectedAsset}
+          isMapMoving={isMapMoving}
         />
       ))}
     </>

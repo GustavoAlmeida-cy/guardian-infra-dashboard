@@ -1,4 +1,4 @@
-import { Marker } from "react-leaflet";
+import { Marker, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import { useCallback } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
@@ -38,14 +38,43 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
 
   return (
     <>
-      {assets.map((asset) => (
-        <Marker
-          key={`${asset.id}-${asset.risco_atual}`}
-          position={[asset.coordenadas.latitude, asset.coordenadas.longitude]}
-          icon={getIcon(asset.risco_atual)}
-          eventHandlers={{ click: () => setSelectedAsset(asset) }}
-        />
-      ))}
+      {assets.map((asset) => {
+        const color = RISK_COLORS[asset.risco_atual];
+        const isCritical = asset.risco_atual === "Crítico";
+
+        return (
+          <Marker
+            key={`marker-${asset.id}`}
+            position={[asset.coordenadas.latitude, asset.coordenadas.longitude]}
+            icon={getIcon(asset.risco_atual)}
+            eventHandlers={{ click: () => setSelectedAsset(asset) }}
+          >
+            {/* O Tooltip agora vive aqui dentro do Marker */}
+            <Tooltip
+              sticky
+              direction="top"
+              offset={[0, -10]} // Ajuste para o tooltip não cobrir o marcador
+              className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
+            >
+              <div className="flex flex-col gap-1 p-1">
+                <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
+                  {isCritical ? "⚠️ ALERTA" : "NORMAL"}
+                </span>
+                <span className="font-bold border-b border-white/10 pb-1">
+                  {asset.nome}
+                </span>
+                <span className="flex items-center gap-1.5 mt-1 font-bold">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  {asset.risco_atual.toUpperCase()}
+                </span>
+              </div>
+            </Tooltip>
+          </Marker>
+        );
+      })}
     </>
   );
 }
