@@ -34,7 +34,7 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
     <div className="absolute bottom-6 left-6 z-500 pointer-events-auto">
       <button
         onClick={handleZoomOut}
-        className="flex items-center gap-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-lg transition-all active:scale-95 shadow-2xl"
+        className="flex cursor-pointer items-center gap-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-lg transition-all active:scale-95 shadow-2xl"
       >
         <Maximize size={16} />
         <span className="text-[10px] font-bold uppercase tracking-wider">
