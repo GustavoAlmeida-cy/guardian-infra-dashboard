@@ -126,4 +126,7 @@
   .leaflet-control-attribution {
     display: none !important;
   }
+  .leaflet-container {
+    background-color: #09090b !important; /* Mesma cor do bg-zinc-950 */
+  }
 }

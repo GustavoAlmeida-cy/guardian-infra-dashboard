@@ -8,70 +8,78 @@ import type { Asset, RiskLevel } from "@/@types/asset";
 import { AssetMarkers } from "./AssetMarkers";
 import { RiskLayers } from "./RiskLayers";
 
+const WORLD_BOUNDS = L.latLngBounds([-90, -180], [90, 180]);
+
 /**
- * Hook utilitário para travar e destravar interações do mapa com estabilidade de referência
+ * Hook para gerenciar as permissões do mapa de forma segura
  */
-const useMapLock = (map: L.Map) => {
-  const lock = useCallback(() => {
-    map.dragging.disable();
-    map.scrollWheelZoom.disable();
-    map.doubleClickZoom.disable();
-  }, [map]);
+function useMapInteractions() {
+  const map = useMap();
 
-  const unlock = useCallback(() => {
-    map.dragging.enable();
-    map.scrollWheelZoom.enable();
-    map.doubleClickZoom.enable();
-  }, [map]);
+  const setMapEnabled = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        map.dragging.enable();
+        map.scrollWheelZoom.enable();
+        map.doubleClickZoom.enable();
+      } else {
+        map.dragging.disable();
+        map.scrollWheelZoom.disable();
+        map.doubleClickZoom.disable();
+      }
+    },
+    [map]
+  );
 
-  return { lock, unlock };
-};
+  return { setMapEnabled };
+}
 
 function InitialBounds({ assets }: { assets: Asset[] }) {
   const map = useMap();
-  const { lock, unlock } = useMapLock(map);
+  const { setMapEnabled } = useMapInteractions();
 
   useEffect(() => {
-    const currentZoom = map.getZoom();
-    if (assets.length > 0 && currentZoom < 10) {
+    if (assets.length > 0) {
       const bounds = L.latLngBounds(
         assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
       );
 
-      lock();
-      map.fitBounds(bounds, { padding: [40, 40], animate: true }); // Padding menor para mobile
+      setMapEnabled(false);
+      map.fitBounds(bounds, { padding: [40, 40], animate: true });
 
-      const timer = setTimeout(unlock, 600);
-      return () => clearTimeout(timer);
+      // Libera o mapa assim que a animação inicial termina
+      map.once("moveend", () => setMapEnabled(true));
     }
-  }, [assets, map, lock, unlock]);
+  }, [assets, map, setMapEnabled]);
 
   return null;
 }
 
 function ZoomOutButton({ assets }: { assets: Asset[] }) {
   const map = useMap();
-  const { lock, unlock } = useMapLock(map);
+  const { setMapEnabled } = useMapInteractions();
 
   const handleZoomOut = () => {
+    setMapEnabled(false); // Trava imediatamente
+
     if (assets.length > 0) {
       const bounds = L.latLngBounds(
         assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
       );
-
-      lock();
-      map.fitBounds(bounds, { padding: [50, 50], duration: 1.5 });
-      setTimeout(unlock, 1600);
+      map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
     } else {
-      map.setView([-15.7938, -47.8828], 4);
+      map.flyTo([-15.7938, -47.8828], 4, { duration: 1.5 });
     }
+
+    // O evento 'moveend' garante que só destrava quando o flyTo termina
+    map.once("moveend", () => setMapEnabled(true));
   };
 
   return (
-    <div className="absolute bottom-8 left-4 md:bottom-6 md:left-6 z-500 pointer-events-auto">
+    <div className="absolute bottom-10 left-4 md:bottom-6 md:left-6 z-500 pointer-events-auto">
       <button
         onClick={handleZoomOut}
-        className="flex cursor-pointer items-center gap-2 bg-zinc-900/95 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 px-4 py-3 md:px-3 md:py-2 rounded-xl md:rounded-lg transition-all active:scale-90 shadow-2xl group"
+        className="flex cursor-pointer items-center gap-2 bg-zinc-900/95 hover:bg-zinc-800 border border-zinc-700/50 text-zinc-300 px-4 py-3 md:px-3 md:py-2 rounded-xl md:rounded-lg transition-all active:scale-95 shadow-2xl group"
       >
         <Maximize size={18} className="group-hover:text-white" />
         <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider">
@@ -84,20 +92,18 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
 
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
-  const { lock, unlock } = useMapLock(map);
+  const { setMapEnabled } = useMapInteractions();
 
   useEffect(() => {
     if (center) {
-      lock();
+      setMapEnabled(false);
       map.flyTo(center, 16, {
         duration: 1.2,
         easeLinearity: 0.25,
-        noMoveStart: true,
       });
-
-      map.once("moveend", unlock);
+      map.once("moveend", () => setMapEnabled(true));
     }
-  }, [center, map, lock, unlock]);
+  }, [center, map, setMapEnabled]);
 
   return null;
 }
@@ -124,11 +130,10 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
 
   return (
     <div className="h-full w-full relative group bg-zinc-950 overflow-hidden">
-      {/* HUD de Monitoramento */}
+      {/* HUD de monitoramento */}
       <div className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-500 gap-6 bg-zinc-950/80 backdrop-blur-xl px-6 py-2 border border-zinc-800 rounded-lg shadow-2xl">
         {Object.entries(stats).map(([level, value]) => {
           const isCritical = level === "Crítico";
-          const colorClass = isCritical ? "text-red-500" : "text-zinc-200";
           const dotColor = {
             Baixo: "#10b981",
             Moderado: "#eab308",
@@ -143,7 +148,7 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
             >
               <div
                 className={`w-3 h-1 rounded-full ${
-                  isCritical ? "animate-pulse shadow-red-glow" : ""
+                  isCritical ? "animate-pulse" : ""
                 }`}
                 style={{
                   backgroundColor: dotColor,
@@ -161,7 +166,9 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
                   {level}
                 </span>
                 <span
-                  className={`text-xs font-mono font-bold leading-none ${colorClass}`}
+                  className={`text-xs font-mono font-bold leading-none ${
+                    isCritical ? "text-red-500" : "text-zinc-200"
+                  }`}
                 >
                   {value}%
                 </span>
@@ -174,12 +181,20 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
       <MapContainer
         center={defaultCenter}
         zoom={4}
+        minZoom={3}
+        maxZoom={18}
         zoomControl={false}
         attributionControl={false}
+        maxBounds={WORLD_BOUNDS}
+        maxBoundsViscosity={1.0}
         className="h-full w-full"
         preferCanvas={true}
       >
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png" />
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+          noWrap={true}
+          bounds={WORLD_BOUNDS}
+        />
 
         <InitialBounds assets={assets} />
         <RiskLayers assets={assets} />
@@ -188,6 +203,8 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
           opacity={0.15}
+          noWrap={true}
+          bounds={WORLD_BOUNDS}
         />
 
         {selectedAsset?.coordenadas && (
