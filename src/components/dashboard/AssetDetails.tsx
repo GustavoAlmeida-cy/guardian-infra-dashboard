@@ -86,14 +86,14 @@ export function AssetDetails() {
       <div className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-2">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-black text-white tracking-tight italic underline decoration-white-500/50 underline-offset-5">
+            <h3 className="text-base font-black text-white tracking-tight italic">
               {selectedAsset.nome}
             </h3>
           </div>
           <span className="bg-zinc-800 text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-mono border border-zinc-700">
             #{selectedAsset.id}
           </span>
-          <div className="flex items-center gap-1.5 mt-2 -mb-2 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">
+          <div className="flex items-center gap-1.5 mt-3 -mb-2 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">
             <Info size={12} style={{ color: riskTheme.color }} />
             Monitoramento de Infraestrutura
           </div>
