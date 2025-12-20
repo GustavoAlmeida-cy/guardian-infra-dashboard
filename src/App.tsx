@@ -4,15 +4,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "sonner";
 import { List, Globe } from "lucide-react";
 
+// CSS essencial para o Leaflet funcionar
+import "leaflet/dist/leaflet.css";
+
 import { ScenarioToggle } from "./components/dashboard/ScenarioToggle";
 import { SplashScreen } from "./components/dashboard/SplashScreen";
 import { Sidebar } from "./components/dashboard/Sidebar";
 import { AssetDetails } from "./components/dashboard/AssetDetails";
 import { AssetDetailsDrawer } from "./components/dashboard/AssetDetailsDrawer";
+import { MapEngine } from "./components/dashboard/MapEngine"; // Importe o componente que criamos
 import { useAssets } from "./hooks/useAssets";
 import { useAssetStore } from "./store/useAssetStore";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton"; // Certifique-on de ter esse componente shadcn
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Drawer,
   DrawerContent,
@@ -25,7 +29,7 @@ const queryClient = new QueryClient();
 function DashboardContent() {
   const { dataSource, selectedAsset } = useAssetStore();
 
-  // SOLUÇÃO DO ERRO TS(2345): Casting do dataSource para o tipo esperado pelo hook
+  // Tipagem corrigida para o hook
   const { data: assets = [], isLoading } = useAssets(
     dataSource as "nacional" | "bh"
   );
@@ -63,15 +67,15 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-6 right-6 z-30">
+        {/* HUD de Controles superiores */}
+        <div className="absolute top-6 right-6 z-1000">
           <ScenarioToggle />
         </div>
 
-        {/* MAPA / SKELETON DE CARREGAMENTO */}
-        <div className="flex-1 relative flex items-center justify-center bg-zinc-950 overflow-hidden">
+        {/* CONTAINER DO MAPA / LOADING */}
+        <div className="flex-1 relative z-0">
           {isLoading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center">
-              {/* Efeito de Grade de Radar (Skeleton de Fundo) */}
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950">
               <div
                 className="absolute inset-0 opacity-20"
                 style={{
@@ -80,7 +84,6 @@ function DashboardContent() {
                 }}
               />
 
-              {/* Overlay de Scan Line */}
               <motion.div
                 initial={{ y: "-100%" }}
                 animate={{ y: "100%" }}
@@ -99,40 +102,26 @@ function DashboardContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-zinc-500 animate-pulse text-xs md:text-sm font-mono tracking-[0.3em] uppercase">
-                    Sincronizando Satélites...
+                  <p className="text-zinc-500 animate-pulse text-[10px] font-mono tracking-[0.3em] uppercase">
+                    Sincronizando Rede Guardian...
                   </p>
                   <div className="flex justify-center gap-1">
-                    <Skeleton className="h-1 w-8 bg-red-600/30" />
-                    <Skeleton className="h-1 w-12 bg-red-600/50" />
-                    <Skeleton className="h-1 w-8 bg-red-600/30" />
+                    <Skeleton className="h-0.5 w-8 bg-red-600/30" />
+                    <Skeleton className="h-0.5 w-12 bg-red-600/50" />
+                    <Skeleton className="h-0.5 w-8 bg-red-600/30" />
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            /* MAPA ATIVO (Placeholder atualizado) */
-            <div className="flex-1 flex flex-col items-center justify-center bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-zinc-900/40 via-zinc-950 to-zinc-950">
-              <div className="text-center p-6 space-y-4">
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-red-500/80 text-xs md:text-sm font-mono tracking-[0.2em] uppercase font-black">
-                    Rede de Monitoramento Ativa
-                  </p>
-                  <div className="h-px w-24 bg-linear-to-r from-transparent via-red-600 to-transparent" />
-                </div>
-                <p className="text-[10px] text-zinc-600 tracking-[0.5em] font-black uppercase">
-                  {dataSource === "bh"
-                    ? "Regional: Minas Gerais"
-                    : "Nacional: Brasil"}
-                </p>
-              </div>
-            </div>
+            /* COMPONENTE DE MAPA REAL */
+            <MapEngine assets={assets} />
           )}
         </div>
 
         {/* LISTA DE ATIVOS MOBILE */}
         {isMobile && (
-          <div className="absolute bottom-8 right-6 z-40">
+          <div className="absolute bottom-8 right-6 z-1001">
             <Drawer>
               <DrawerTrigger asChild>
                 <Button

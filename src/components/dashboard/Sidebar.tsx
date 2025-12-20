@@ -95,7 +95,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
   return (
     <aside
       className={`${
-        isMobile ? "w-full" : "w-85"
+        isMobile ? "w-full" : "w-80"
       } h-full flex flex-col bg-zinc-950/50 backdrop-blur-xl transition-all`}
     >
       <div className="p-6 pb-4 space-y-4">
