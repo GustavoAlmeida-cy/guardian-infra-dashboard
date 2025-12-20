@@ -6,15 +6,42 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton"; // Importando o Skeleton
 
 interface SidebarProps {
   assets: Asset[];
   isMobile?: boolean;
 }
 
+// Componente Interno para o Esqueleto de um Item
+function SidebarItemSkeleton() {
+  return (
+    <div className="w-full p-4 rounded-xl border border-zinc-900/80 bg-zinc-900/10 space-y-4">
+      <div className="flex justify-between items-start gap-2">
+        <div className="space-y-2 flex-1">
+          {/* Nome do Ativo */}
+          <Skeleton className="h-3 w-3/4 bg-zinc-800" />
+          {/* Localização */}
+          <div className="flex items-center gap-1.5">
+            <Skeleton className="h-3 w-3 rounded-full bg-zinc-800" />
+            <Skeleton className="h-2 w-1/2 bg-zinc-900" />
+          </div>
+        </div>
+        {/* Badge de Risco */}
+        <Skeleton className="h-5 w-16 rounded-lg bg-zinc-800" />
+      </div>
+      {/* Barra de Progresso */}
+      <Skeleton className="h-1 w-full rounded-full bg-zinc-900" />
+    </div>
+  );
+}
+
 export function Sidebar({ assets, isMobile }: SidebarProps) {
   const { setSelectedAsset, selectedAsset } = useAssetStore();
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Se assets estiver vazio, assumimos que está carregando (isLoading do DashboardContent)
+  const isLoading = assets.length === 0;
 
   const filteredAssets = useMemo(() => {
     return assets.filter(
@@ -24,7 +51,6 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
     );
   }, [assets, searchTerm]);
 
-  // Função para definir o tema e a porcentagem da barra por nível de risco
   const getRiskDetails = (risk: string) => {
     switch (risk) {
       case "Crítico":
@@ -58,12 +84,11 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
     }
   };
 
-  // Função para lidar com a seleção (Toggle)
   const handleSelectAsset = (asset: Asset) => {
     if (selectedAsset?.id === asset.id) {
-      setSelectedAsset(null); // Desmarca se já estiver selecionado
+      setSelectedAsset(null);
     } else {
-      setSelectedAsset(asset); // Seleciona novo
+      setSelectedAsset(asset);
     }
   };
 
@@ -88,9 +113,13 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
               </span>
             </div>
           </div>
-          <span className="text-[10px] font-mono text-zinc-600 bg-zinc-900 px-2 py-1 rounded">
-            {filteredAssets.length}/{assets.length}
-          </span>
+          {isLoading ? (
+            <Skeleton className="h-5 w-10 bg-zinc-900" />
+          ) : (
+            <span className="text-[10px] font-mono text-zinc-600 bg-zinc-900 px-2 py-1 rounded">
+              {filteredAssets.length}/{assets.length}
+            </span>
+          )}
         </div>
 
         <div className="relative group">
@@ -100,6 +129,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
           />
           <Input
             placeholder="Filtrar infraestrutura..."
+            disabled={isLoading}
             className="pl-9 bg-zinc-900/40 border-zinc-800 focus:border-red-500/50 focus:ring-red-500/20 text-xs h-10 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -111,7 +141,12 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
-          {filteredAssets.length > 0 ? (
+          {isLoading ? (
+            // Renderiza 5 itens de esqueleto enquanto carrega
+            Array.from({ length: 5 }).map((_, i) => (
+              <SidebarItemSkeleton key={i} />
+            ))
+          ) : filteredAssets.length > 0 ? (
             filteredAssets.map((asset) => {
               const details = getRiskDetails(asset.risco_atual);
               const isSelected = selectedAsset?.id === asset.id;
@@ -121,15 +156,15 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                   key={asset.id}
                   onClick={() => handleSelectAsset(asset)}
                   className={`${
-                    isMobile ? "w-full" : "w-76"
-                  } text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group mb-1 ${
+                    isMobile ? "w-full" : "w-full"
+                  } text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group ${
                     isSelected
                       ? "bg-zinc-900 border-zinc-700 shadow-xl"
                       : "border-zinc-900/80 hover:border-zinc-700 hover:bg-zinc-900/30"
                   }`}
                 >
                   {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 shadow-[2px_0_10px_rgba(220,38,38,0.5)] transition-all" />
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 shadow-[2px_0_10px_rgba(220,38,38,0.5)]" />
                   )}
 
                   <div className="flex justify-between items-start gap-2">
@@ -175,7 +210,6 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                     </div>
                   </div>
 
-                  {/* Progress Bar refletindo a etapa do risco */}
                   <div className="mt-4 h-1 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50">
                     <div
                       className={`h-full transition-all duration-1000 ease-out ${
@@ -212,7 +246,9 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
           <div className="flex justify-between border-t border-zinc-900/50 pt-1 mt-1">
             <span>ÚLTIMA ATUALIZAÇÃO:</span>
             <span className="text-zinc-400">
-              {useAssetStore.getState().lastUpdate.toLocaleTimeString()}
+              {isLoading
+                ? "CARREGANDO..."
+                : useAssetStore.getState().lastUpdate.toLocaleTimeString()}
             </span>
           </div>
         </div>
