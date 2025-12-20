@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * HOOK: useAssetActions
+ * DESCRIÇÃO: Orquestra a lógica de negócios, temporizadores de segurança e feedback visual (Toasts).
+ * FUNCIONAMENTO: Atua como uma máquina de estados para as ações de "Ataque" e "Auditoria".
+ */
+
 import { useMemo, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { TacticalToast } from "@/components/dashboard/TacticalToast";
@@ -16,6 +22,7 @@ import {
 import { useAssetStore } from "@/store/useAssetStore";
 import type { ForecastDataPoint } from "@/components/dashboard/ForecastChart";
 
+// FUNÇÃO AUXILIAR: Gera dados fictícios para o gráfico baseados na severidade do risco
 const generateForecastData = (baseRisk: string): ForecastDataPoint[] => {
   const multiplier =
     baseRisk === "Crítico" ? 1.2 : baseRisk === "Alto" ? 1.0 : 0.6;
@@ -34,8 +41,10 @@ export function useAssetActions() {
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // REFERÊNCIA DE TIMEOUT: Crucial para persistir o ID do timer entre re-renderizações e permitir o cancelamento
   const processTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // TEMA DE RISCO: Define a identidade visual (cor/ícone) baseada no status do ativo
   const riskTheme = useMemo(() => {
     if (!selectedAsset) return null;
     switch (selectedAsset.risco_atual) {
@@ -57,7 +66,8 @@ export function useAssetActions() {
   );
 
   /**
-   * handleCancel: Aciona o toast BRANCO (neutral)
+   * CANCELAR OPERAÇÃO
+   * Interrompe o timer ativo, limpa a referência e reseta o estado de processamento.
    */
   const handleCancel = useCallback(() => {
     if (processTimeoutRef.current) {
@@ -65,13 +75,13 @@ export function useAssetActions() {
       processTimeoutRef.current = null;
       setIsProcessing(false);
 
-      toast.dismiss();
+      toast.dismiss(); // Remove o toast de "validando" imediatamente
 
       toast.custom(
         (t) => (
           <TacticalToast
             t={t}
-            variant="neutral" // Variante branca/neutra
+            variant="neutral" // Estilo branco de intervenção manual
             title="Comando Abortado"
             icon={<AlertOctagon size={20} className="text-white" />}
             description="A operação foi interceptada e cancelada pelo operador."
@@ -83,7 +93,8 @@ export function useAssetActions() {
   }, []);
 
   /**
-   * handleAction: Protocolo de Ataque -> Finaliza em VERDE (success)
+   * PROTOCOLO DE ATAQUE (Simulação)
+   * Inicia um estado de "espera" de 4 segundos permitindo cancelamento.
    */
   const handleAction = useCallback(async () => {
     if (!selectedAsset || isProcessing) return;
@@ -99,18 +110,20 @@ export function useAssetActions() {
       />
     ));
 
+    // Agenda a execução final
     processTimeoutRef.current = setTimeout(() => {
       toast.dismiss(processId);
       toast.custom((t) => (
         <TacticalToast
           t={t}
-          variant="success" // Verde para sucesso
+          variant="success"
           title="Ordem Enviada"
           icon={<Zap size={20} className="text-emerald-500 animate-pulse" />}
           description={`Mobilização concluída para ${selectedAsset.nome}.`}
         />
       ));
 
+      // Delay técnico para resetar o botão após o sucesso
       setTimeout(() => {
         setIsProcessing(false);
         processTimeoutRef.current = null;
@@ -119,7 +132,8 @@ export function useAssetActions() {
   }, [selectedAsset, isProcessing]);
 
   /**
-   * handleProtocol: Auditoria -> Finaliza em VERDE (success)
+   * PROTOCOLO DE AUDITORIA
+   * Executa uma validação rápida de integridade dos dados.
    */
   const handleProtocol = useCallback(() => {
     if (!selectedAsset || isProcessing) return;
@@ -140,7 +154,7 @@ export function useAssetActions() {
       toast.custom((t) => (
         <TacticalToast
           t={t}
-          variant="success" // Verde para sucesso
+          variant="success"
           title="Audit Concluído"
           icon={<ShieldCheck size={20} className="text-emerald-500" />}
           description={`Ativo #${selectedAsset.id} operando em parâmetros normais.`}
@@ -153,13 +167,15 @@ export function useAssetActions() {
   }, [selectedAsset, isProcessing]);
 
   /**
-   * handleCopyCoords: Copiar coordenadas -> VERDE (success)
+   * CLIPBOARD: Geo-Localização
+   * Copia as coordenadas para a área de transferência com feedback visual.
    */
   const handleCopyCoords = useCallback(() => {
     if (!selectedAsset) return;
     const coords = `${selectedAsset.coordenadas.latitude.toFixed(
       6
     )}, ${selectedAsset.coordenadas.longitude.toFixed(6)}`;
+
     navigator.clipboard.writeText(coords);
     setCopied(true);
 
@@ -176,6 +192,7 @@ export function useAssetActions() {
       { duration: 2500 }
     );
 
+    // Reseta o ícone de cópia após 2 segundos
     setTimeout(() => setCopied(false), 2000);
   }, [selectedAsset]);
 

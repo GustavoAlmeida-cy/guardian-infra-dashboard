@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * COMPONENTE: AssetDetails (Desktop)
+ * DESCRIÇÃO: Painel lateral flutuante para monitoramento tático de ativos.
+ * CARACTERÍSTICA: Utiliza estados de "Modo de Emergência" (isProcessing) para alterar a interface.
+ */
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -17,6 +23,7 @@ import { MetricCard, CommandButton } from "@/components/dashboard/TacticalBase";
 import { ForecastChart } from "@/components/dashboard/ForecastChart";
 
 export function AssetDetails() {
+  // Centralização da lógica: O hook orquestra desde as cores do risco até o temporizador de cancelamento
   const {
     selectedAsset,
     setSelectedAsset,
@@ -30,6 +37,7 @@ export function AssetDetails() {
     handleCopyCoords,
   } = useAssetActions();
 
+  // Previne erros de runtime se o modal for chamado sem um ativo no contexto
   if (!selectedAsset || !riskTheme) return null;
 
   return (
@@ -41,7 +49,7 @@ export function AssetDetails() {
         exit={{ x: -100, opacity: 0, scale: 0.95 }}
         className="absolute top-6 left-6 w-96 bg-zinc-950/95 border border-zinc-800/50 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden font-sans"
       >
-        {/* Barra de Status: Branca durante validação, Risco no estado normal */}
+        {/* INDICADOR VISUAL SUPERIOR: Responde ao estado de processamento mudando para Branco */}
         <div
           className="h-1.5 w-full transition-all duration-500 ease-in-out"
           style={{
@@ -49,7 +57,7 @@ export function AssetDetails() {
           }}
         />
 
-        {/* Header */}
+        {/* HEADER: Informações de Identificação e Localização */}
         <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start">
           <div className="space-y-3">
             <h3 className="text-base font-black text-white italic uppercase tracking-tight">
@@ -59,6 +67,8 @@ export function AssetDetails() {
               <span className="bg-zinc-800 text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-mono border border-zinc-700">
                 ID: {selectedAsset.id}
               </span>
+
+              {/* Clipboard: Mostra feedback de sucesso (Check) ou ícone de cópia */}
               <button
                 onClick={handleCopyCoords}
                 className="flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -74,19 +84,21 @@ export function AssetDetails() {
               </button>
             </div>
           </div>
+
+          {/* Botão Fechar: Desabilitado durante processamento para evitar fechamento acidental */}
           <Button
             variant="ghost"
             size="icon"
             disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed"
+            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100/10 disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </Button>
         </header>
 
-        {/* Content */}
         <div className="p-6 space-y-8">
+          {/* GRID DE MÉTRICAS: Exibição de dados técnicos do ativo */}
           <div className="grid grid-cols-3 gap-3">
             <MetricCard
               label="Impacto"
@@ -110,6 +122,7 @@ export function AssetDetails() {
             />
           </div>
 
+          {/* SEÇÃO DE ANÁLISE: O gráfico e o label mudam para Branco/Pulse durante a validação */}
           <div className="space-y-4">
             <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-black flex items-center gap-2">
               <div
@@ -125,13 +138,13 @@ export function AssetDetails() {
                 : "Projeção de Risco (24h)"}
             </span>
 
-            {/* Gráfico: Branco durante validação, Risco no estado normal */}
             <ForecastChart
               data={forecastData}
               color={isProcessing ? "#ffffff" : riskTheme.color}
             />
           </div>
 
+          {/* FOOTER: Switch de Ações - Alterna entre botões de comando e botão de cancelamento imediato */}
           <footer className="relative h-11">
             <AnimatePresence mode="wait">
               {!isProcessing ? (
@@ -167,6 +180,7 @@ export function AssetDetails() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
+                  {/* BOTÃO DE EMERGÊNCIA: Estilo Branco "High-Contrast" para ação de aborto */}
                   <Button
                     onClick={handleCancel}
                     className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-black uppercase italic tracking-tighter text-[11px] rounded-lg transition-all border-none shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer"
