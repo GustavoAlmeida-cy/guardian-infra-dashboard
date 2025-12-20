@@ -1,6 +1,6 @@
-import { Marker, Tooltip } from "react-leaflet";
+import { Marker, Tooltip, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
 import type { Asset, RiskLevel } from "@/@types/asset";
 
@@ -11,8 +11,18 @@ const RISK_COLORS: Record<RiskLevel, string> = {
   Baixo: "#10b981",
 };
 
+// Quando o zoom for 16 ou maior, o marcador desaparece para mostrar apenas o polígono
+const ZOOM_THRESHOLD = 16;
+
 export function AssetMarkers({ assets }: { assets: Asset[] }) {
   const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
+  const [zoom, setZoom] = useState(5);
+
+  const map = useMapEvents({
+    zoomend: () => {
+      setZoom(map.getZoom());
+    },
+  });
 
   const getIcon = useCallback((risk: RiskLevel) => {
     const isCritical = risk === "Crítico";
@@ -21,7 +31,7 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
     return L.divIcon({
       className: "custom-marker-container",
       html: `
-        <div class="relative flex items-center justify-center">
+        <div class="relative flex items-center justify-center transition-all duration-500">
           ${
             isCritical
               ? `<div class="absolute h-8 w-8 rounded-full bg-red-600/20 animate-ping"></div>`
@@ -36,6 +46,10 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
     });
   }, []);
 
+  // LÓGICA DE VISIBILIDADE:
+  // Se o zoom for maior ou igual ao limite, não renderizamos nada (visibilidade zero)
+  if (zoom >= (ZOOM_THRESHOLD - 3)) return null;
+
   return (
     <>
       {assets.map((asset) => {
@@ -49,11 +63,10 @@ export function AssetMarkers({ assets }: { assets: Asset[] }) {
             icon={getIcon(asset.risco_atual)}
             eventHandlers={{ click: () => setSelectedAsset(asset) }}
           >
-            {/* O Tooltip agora vive aqui dentro do Marker */}
             <Tooltip
               sticky
               direction="top"
-              offset={[0, -10]} // Ajuste para o tooltip não cobrir o marcador
+              offset={[0, -10]}
               className="bg-zinc-950/90! border-zinc-800! text-white! font-mono text-[10px]! rounded-md! shadow-2xl!"
             >
               <div className="flex flex-col gap-1 p-1">
