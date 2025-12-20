@@ -1,11 +1,17 @@
 {
+  /* Não processa arquivos diretamente neste arquivo raiz */
   "files": [],
+
+  /* Delega a compilação para as configurações específicas de ambiente */
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
+
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
+
+    /* Configuração de caminhos redundante para suporte a ferramentas legadas */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

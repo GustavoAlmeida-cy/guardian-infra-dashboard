@@ -1,4 +1,4 @@
-# Logs
+# Logs e Debugging
 logs
 *.log
 npm-debug.log*
@@ -7,12 +7,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependências e Build
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# TypeScript & Vite
+*.tsbuildinfo
+.vite
+
+# Diretórios de Editores e OS
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +27,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Testes e Cobertura
+coverage
+.nyc_output
+
+# Variáveis de Ambiente (Segurança Crítica)
+.env
+*.env.local

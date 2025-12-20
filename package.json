@@ -1,12 +1,14 @@
 {
   "name": "guardian-infra-dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "author": "Gustavo Almeida | gustavo.almeida.cy@gmail.com",
+  "description": "Dashboard de inteligência tática para monitoramento de infraestrutura crítica e riscos climáticos.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
