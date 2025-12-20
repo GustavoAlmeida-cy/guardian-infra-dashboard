@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner"; // IMPORTADO
+import { TacticalToast } from "@/components/dashboard/TacticalToast"; // IMPORTADO
 import {
   Zap,
   ShieldCheck,
@@ -8,6 +10,10 @@ import {
   TrendingDown,
   AlertCircle,
   Minus,
+  MapPin,
+  Copy,
+  Check,
+  Terminal, // IMPORTADO
 } from "lucide-react";
 import { useAssetStore } from "@/store/useAssetStore";
 import { Button } from "@/components/ui/button";
@@ -43,6 +49,7 @@ const generateForecastData = (baseRisk: string) => {
 
 export function AssetDetailsDrawer() {
   const { selectedAsset, setSelectedAsset } = useAssetStore();
+  const [copied, setCopied] = useState(false);
 
   const riskTheme = useMemo(() => {
     if (!selectedAsset) return null;
@@ -64,6 +71,54 @@ export function AssetDetailsDrawer() {
     [selectedAsset]
   );
 
+  // --- HANDLERS PARA TOASTS ---
+  const handleAction = () => {
+    if (!selectedAsset) return;
+    toast.custom(() => (
+      <TacticalToast
+        variant="danger"
+        title="Resposta Mobile Ativada"
+        icon={<Zap size={18} className="fill-current animate-pulse" />}
+        description={`Mobilização tática iniciada para ${selectedAsset.nome}.`}
+      />
+    ));
+  };
+
+  const handleProtocol = () => {
+    if (!selectedAsset) return;
+    toast.custom(() => (
+      <TacticalToast
+        variant="info"
+        title="Protocolo de Segurança"
+        icon={<ShieldCheck size={18} />}
+        description={`Verificando integridade do Ativo #${selectedAsset.id}.`}
+      />
+    ));
+  };
+
+  const handleCopyCoords = () => {
+    if (!selectedAsset) return;
+    const coords = `${selectedAsset.coordenadas.latitude.toFixed(
+      6
+    )}, ${selectedAsset.coordenadas.longitude.toFixed(6)}`;
+    navigator.clipboard.writeText(coords);
+    setCopied(true);
+
+    toast.custom(
+      () => (
+        <TacticalToast
+          variant="success"
+          title="Coordenadas Copiadas"
+          icon={<Terminal size={18} />}
+          description={coords}
+        />
+      ),
+      { duration: 2000 }
+    );
+
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (!selectedAsset || !riskTheme) return null;
 
   return (
@@ -80,11 +135,39 @@ export function AssetDetailsDrawer() {
               <DrawerTitle className="text-xl font-black text-white italic tracking-tight uppercase">
                 {selectedAsset.nome}
               </DrawerTitle>
-              <div className="flex flex-col gap-1">
-                <span className="bg-zinc-900 text-zinc-500 text-[9px] w-fit px-1.5 py-0.5 rounded font-mono border border-zinc-800">
-                  #{selectedAsset.id}
-                </span>
-                <div className="flex items-center gap-1.5 mt-1 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">
+
+              <div className="flex flex-col gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-zinc-900 text-zinc-500 text-[9px] w-fit px-1.5 py-0.5 rounded font-mono border border-zinc-800">
+                    #{selectedAsset.id}
+                  </span>
+
+                  <button
+                    onClick={handleCopyCoords}
+                    className="group flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 hover:border-zinc-700 transition-colors"
+                  >
+                    <MapPin
+                      size={10}
+                      className="text-zinc-600 group-hover:text-zinc-400"
+                    />
+                    <span className="text-[9px] font-mono text-zinc-400 group-active:text-white">
+                      {selectedAsset.coordenadas.latitude.toFixed(6)},{" "}
+                      {selectedAsset.coordenadas.longitude.toFixed(6)}
+                    </span>
+                    <div className="ml-1 border-l border-zinc-800 pl-1.5">
+                      {copied ? (
+                        <Check size={10} className="text-emerald-500" />
+                      ) : (
+                        <Copy
+                          size={10}
+                          className="text-zinc-600 group-hover:text-zinc-400"
+                        />
+                      )}
+                    </div>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase tracking-widest font-bold">
                   <Info size={12} style={{ color: riskTheme.color }} />
                   Monitoramento de Infraestrutura
                 </div>
@@ -105,7 +188,7 @@ export function AssetDetailsDrawer() {
 
         <ScrollArea className="flex-1 px-6">
           <div className="py-4 space-y-8">
-            {/* Status Grid - Idêntico ao Desktop */}
+            {/* Status Grid */}
             <div className="grid grid-cols-3 gap-3">
               <div className="flex flex-col gap-2 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/50">
                 <span className="text-[9px] text-zinc-500 uppercase font-black flex items-center gap-1">
@@ -151,10 +234,6 @@ export function AssetDetailsDrawer() {
                     style={{ backgroundColor: riskTheme.color }}
                   />
                   Análise Preditiva
-                </span>
-                <span className="text-[10px] font-mono text-zinc-600">
-                  Variação:{" "}
-                  {selectedAsset.risco_atual === "Crítico" ? "+14.2%" : "-2.1%"}
                 </span>
               </div>
 
@@ -218,18 +297,20 @@ export function AssetDetailsDrawer() {
               </div>
             </div>
 
-            {/* Ações Mobile - Textos idênticos ao Desktop */}
+            {/* Ações Mobile */}
             <div className="grid grid-cols-1 gap-3 pb-8">
               <Button
-                className="w-full h-14 text-white text-[11px] font-black shadow-xl border-none active:scale-95 transition-all"
+                onClick={handleAction} // ADICIONADO
+                className="w-full h-14 text-white text-[11px] font-black shadow-xl border-none active:scale-95 transition-all cursor-pointer"
                 style={{ backgroundColor: riskTheme.color }}
               >
                 <Zap size={16} className="mr-2 fill-current animate-pulse" />
                 ACIONAR RESPOSTA
               </Button>
               <Button
+                onClick={handleProtocol} // ADICIONADO
                 variant="outline"
-                className="w-full h-14 border-zinc-800 bg-zinc-900/50 text-[11px] font-black text-zinc-400 hover:text-white active:scale-95 transition-all"
+                className="w-full h-14 border-zinc-800 bg-zinc-900/50 text-[11px] font-black text-zinc-400 hover:text-white active:scale-95 transition-all cursor-pointer"
               >
                 <ShieldCheck size={16} className="mr-2" />
                 PROTOCOLO

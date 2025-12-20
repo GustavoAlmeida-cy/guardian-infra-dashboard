@@ -160,7 +160,8 @@ export default function App() {
         richColors
         closeButton
         toastOptions={{
-          style: { background: "#09090b", border: "1px solid #27272a" },
+          unstyled: true, // Isso remove a borda e o fundo padrão do sonner
+          className: "flex justify-end", // Garante o alinhamento correto
         }}
       />
       <DashboardContent />
