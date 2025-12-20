@@ -42,7 +42,7 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
   };
 
   return (
-    <div className="absolute bottom-6 left-6 z-[500] pointer-events-auto">
+    <div className="absolute bottom-6 left-6 z-500 pointer-events-auto">
       <button
         onClick={handleZoomOut}
         className="flex cursor-pointer items-center gap-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-lg transition-all active:scale-95 shadow-2xl group"
@@ -77,7 +77,7 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
   return (
     <div className="h-full w-full relative group bg-zinc-950">
       {/* HUD: Legenda Completa Estilo Guardian Infra */}
-      <div className="absolute bottom-6 left-44 z-[500] flex gap-5 bg-zinc-950/80 backdrop-blur-md px-6 py-2.5 border border-zinc-800 rounded-full shadow-2xl">
+      <div className="absolute bottom-6 left-44 z-500 flex gap-5 bg-zinc-950/80 backdrop-blur-md px-6 py-2.5 border border-zinc-800 rounded-full shadow-2xl">
         <div className="flex items-center gap-2">
           <div className="w-3 h-1 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]" />
           <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-tighter">

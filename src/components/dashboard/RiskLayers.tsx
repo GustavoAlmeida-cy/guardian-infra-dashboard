@@ -1,4 +1,5 @@
-import { Polygon, Tooltip } from "react-leaflet";
+import { Polygon, Tooltip, useMapEvents } from "react-leaflet";
+import { useState } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
 import type { Asset, RiskLevel } from "@/@types/asset";
 
@@ -11,31 +12,36 @@ const RISK_COLORS: Record<RiskLevel, string> = {
 
 export function RiskLayers({ assets }: { assets: Asset[] }) {
   const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
+  const selectedAsset = useAssetStore((state) => state.selectedAsset);
 
-  // Raio do hexágono (ajustado para uma escala visual melhor)
+  // Estado para rastrear o zoom e ajustar as bordas dinamicamente
+  const [zoom, setZoom] = useState(5);
+  const map = useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  });
+
   const HEX_RADIUS = 0.005;
 
-  /**
-   * Gera pontos do hexágono centralizados na coordenada do asset
-   */
+  // Cálculo de espessura da borda baseado no zoom
+  // Quanto maior o zoom (perto), mais fina a borda relativa para não cobrir o preenchimento
+  const getDynamicWeight = (isCritical: boolean, isSelected: boolean) => {
+    const baseWeight = zoom > 12 ? 1 : zoom > 8 ? 1.5 : 2;
+    if (isSelected) return baseWeight + 2;
+    if (isCritical) return baseWeight + 1;
+    return baseWeight;
+  };
+
   const getHexagonPoints = (
     lat: number,
     lng: number,
     radius: number
   ): [number, number][] => {
     const points: [number, number][] = [];
-
-    // Fator de correção para longitude baseado na latitude (projeção Mercator básica)
-    // Isso evita que o hexágono fique "esticado" horizontalmente
     const aspectCorrection = Math.cos(lat * (Math.PI / 180));
     const lngRadius = radius / aspectCorrection;
 
     for (let i = 0; i < 6; i++) {
-      // 60 graus por ponto. Começamos em 0 para pontas nas laterais
-      // ou 30 para ponta no topo (estilo H3)
-      const angle_deg = 60 * i + 30;
-      const angle_rad = (Math.PI / 180) * angle_deg;
-
+      const angle_rad = (Math.PI / 180) * (60 * i + 30);
       points.push([
         lat + radius * Math.cos(angle_rad),
         lng + lngRadius * Math.sin(angle_rad),
@@ -48,7 +54,10 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
     <>
       {assets.map((asset) => {
         const isCritical = asset.risco_atual === "Crítico";
+        const isSelected = selectedAsset?.id === asset.id;
         const color = RISK_COLORS[asset.risco_atual];
+        const weight = getDynamicWeight(isCritical, isSelected);
+
         const points = getHexagonPoints(
           asset.coordenadas.latitude,
           asset.coordenadas.longitude,
@@ -64,18 +73,19 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
             }}
             pathOptions={{
               fillColor: color,
-              fillOpacity: isCritical ? 0.5 : 0.25,
-              color: color,
-              weight: isCritical ? 2 : 1,
-              opacity: 0.6,
+              fillOpacity: isSelected ? 0.7 : isCritical ? 0.4 : 0.2,
+              color: isSelected ? "#ffffff" : color,
+              weight: weight,
+              opacity: isSelected ? 1 : 0.6,
               lineJoin: "round",
+              // Aumentamos o suavizado da transição para o zoom
               className: `
-                transition-all duration-500 cursor-pointer hover:fill-opacity-60
+                transition-all duration-300 cursor-pointer 
+                hover:fill-opacity-80 hover:stroke-[3px]
                 ${
-                  isCritical
-                    ? "animate-pulse drop-shadow-[0_0_8px_rgba(220,38,38,0.5)]"
-                    : ""
+                  isCritical ? "animate-pulse-intense drop-shadow-red-glow" : ""
                 }
+                ${isSelected ? "drop-shadow-white-glow" : ""}
               `,
             }}
           >
@@ -85,8 +95,8 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
               className="bg-zinc-950/90 border-zinc-800 text-white font-mono text-[10px] rounded-md shadow-2xl"
             >
               <div className="flex flex-col gap-1 p-1">
-                <span className="text-zinc-500 text-[8px] uppercase tracking-tighter">
-                  Monitoramento em Tempo Real
+                <span className="text-zinc-500 text-[8px] uppercase tracking-widest font-bold">
+                  {isCritical ? "⚠️ ALERTA" : "NORMAL"}
                 </span>
                 <span className="font-bold border-b border-white/10 pb-1">
                   {asset.nome}
@@ -96,7 +106,7 @@ export function RiskLayers({ assets }: { assets: Asset[] }) {
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: color }}
                   />
-                  RISCO {asset.risco_atual.toUpperCase()}
+                  {asset.risco_atual.toUpperCase()}
                 </span>
               </div>
             </Tooltip>
