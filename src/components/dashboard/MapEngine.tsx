@@ -1,6 +1,6 @@
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useAssetStore } from "@/store/useAssetStore";
 import { Maximize } from "lucide-react";
 import type { Asset, RiskLevel } from "@/@types/asset";
@@ -9,11 +9,27 @@ import { AssetMarkers } from "./AssetMarkers";
 import { RiskLayers } from "./RiskLayers";
 
 /**
- * Ajusta o zoom apenas se o usuário estiver em visão macro (zoom < 10)
- * Isso evita que o mapa "pule" durante o polling se o usuário estiver analisando um ponto.
+ * Hook utilitário para travar e destravar interações do mapa com estabilidade de referência
  */
+const useMapLock = (map: L.Map) => {
+  const lock = useCallback(() => {
+    map.dragging.disable();
+    map.scrollWheelZoom.disable();
+    map.doubleClickZoom.disable();
+  }, [map]);
+
+  const unlock = useCallback(() => {
+    map.dragging.enable();
+    map.scrollWheelZoom.enable();
+    map.doubleClickZoom.enable();
+  }, [map]);
+
+  return { lock, unlock };
+};
+
 function InitialBounds({ assets }: { assets: Asset[] }) {
   const map = useMap();
+  const { lock, unlock } = useMapLock(map);
 
   useEffect(() => {
     const currentZoom = map.getZoom();
@@ -21,21 +37,31 @@ function InitialBounds({ assets }: { assets: Asset[] }) {
       const bounds = L.latLngBounds(
         assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
       );
+
+      lock();
       map.fitBounds(bounds, { padding: [100, 100], animate: true });
+
+      const timer = setTimeout(unlock, 600);
+      return () => clearTimeout(timer);
     }
-  }, [assets, map]);
+  }, [assets, map, lock, unlock]); // Agora com dependências estáveis
 
   return null;
 }
 
 function ZoomOutButton({ assets }: { assets: Asset[] }) {
   const map = useMap();
+  const { lock, unlock } = useMapLock(map);
+
   const handleZoomOut = () => {
     if (assets.length > 0) {
       const bounds = L.latLngBounds(
         assets.map((a) => [a.coordenadas.latitude, a.coordenadas.longitude])
       );
+
+      lock();
       map.fitBounds(bounds, { padding: [70, 70], duration: 1.5 });
+      setTimeout(unlock, 1600);
     } else {
       map.setView([-15.7938, -47.8828], 4);
     }
@@ -58,15 +84,21 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
 
 function ChangeView({ center }: { center: [number, number] }) {
   const map = useMap();
+  const { lock, unlock } = useMapLock(map);
+
   useEffect(() => {
     if (center) {
+      lock();
       map.flyTo(center, 16, {
         duration: 1.2,
         easeLinearity: 0.25,
         noMoveStart: true,
       });
+
+      map.once("moveend", unlock);
     }
-  }, [center, map]);
+  }, [center, map, lock, unlock]); // Dependências corrigidas
+
   return null;
 }
 
@@ -74,11 +106,9 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
   const selectedAsset = useAssetStore((state) => state.selectedAsset);
   const defaultCenter: [number, number] = [-15.7938, -47.8828];
 
-  // Cálculo de estatísticas para o HUD
   const stats = useMemo(() => {
     const total = assets.length;
     if (total === 0) return { Crítico: 0, Alto: 0, Moderado: 0, Baixo: 0 };
-
     const counts = assets.reduce((acc, asset) => {
       acc[asset.risco_atual] = (acc[asset.risco_atual] || 0) + 1;
       return acc;
@@ -94,59 +124,51 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
 
   return (
     <div className="h-full w-full relative group bg-zinc-950 overflow-hidden">
-      {/* HUD: Painel de Controle de Risco (Centralizado) */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-500 flex gap-2 md:gap-6 bg-zinc-950/80 backdrop-blur-xl px-4 py-2 border border-zinc-800 rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        {/* Nível: Baixo */}
-        <div className="flex items-center gap-3 border-r border-zinc-800/50 pr-4 last:border-0">
-          <div className="w-3 h-1 bg-[#10b981] rounded-full shadow-[0_0_8px_#10b981]" />
-          <div className="flex flex-col">
-            <span className="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">
-              Baixo
-            </span>
-            <span className="text-xs text-zinc-200 font-mono font-bold leading-none">
-              {stats.Baixo}%
-            </span>
-          </div>
-        </div>
+      {/* HUD de Monitoramento */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-500 flex gap-2 md:gap-6 bg-zinc-950/80 backdrop-blur-xl px-4 py-2 border border-zinc-800 rounded-lg shadow-2xl">
+        {Object.entries(stats).map(([level, value]) => {
+          const isCritical = level === "Crítico";
+          const colorClass = isCritical ? "text-red-500" : "text-zinc-200";
+          const dotColor = {
+            Baixo: "#10b981",
+            Moderado: "#eab308",
+            Alto: "#f97316",
+            Crítico: "#dc2626",
+          }[level as RiskLevel];
 
-        {/* Nível: Moderado */}
-        <div className="flex items-center gap-3 border-r border-zinc-800/50 pr-4 last:border-0">
-          <div className="w-3 h-1 bg-[#eab308] rounded-full shadow-[0_0_8px_#eab308]" />
-          <div className="flex flex-col">
-            <span className="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">
-              Moderado
-            </span>
-            <span className="text-xs text-zinc-200 font-mono font-bold leading-none">
-              {stats.Moderado}%
-            </span>
-          </div>
-        </div>
-
-        {/* Nível: Alto */}
-        <div className="flex items-center gap-3 border-r border-zinc-800/50 pr-4 last:border-0">
-          <div className="w-3 h-1 bg-[#f97316] rounded-full shadow-[0_0_8px_#f97316]" />
-          <div className="flex flex-col">
-            <span className="text-[7px] text-zinc-500 font-bold uppercase tracking-widest">
-              Alto
-            </span>
-            <span className="text-xs text-zinc-200 font-mono font-bold leading-none">
-              {stats.Alto}%
-            </span>
-          </div>
-        </div>
-
-        {/* Nível: Crítico (Destaque com Alerta) */}
-        <div className="flex items-center gap-3 pr-2">
-          <div className="w-3 h-1 bg-[#dc2626] rounded-full shadow-red-glow animate-pulse" />
-          <div className="flex flex-col">
-            <span className="text-[7px] text-red-500 font-black uppercase tracking-widest italic">
-              Crítico
-            </span>
-            <span className="text-xs text-red-500 font-mono font-black leading-none">
-              {stats.Crítico}%
-            </span>
-          </div>
-        </div>
+          return (
+            <div
+              key={level}
+              className="flex items-center gap-3 border-r border-zinc-800/50 pr-4 last:border-0 last:pr-2"
+            >
+              <div
+                className={`w-3 h-1 rounded-full ${
+                  isCritical ? "animate-pulse shadow-red-glow" : ""
+                }`}
+                style={{
+                  backgroundColor: dotColor,
+                  boxShadow: `0 0 8px ${dotColor}`,
+                }}
+              />
+              <div className="flex flex-col">
+                <span
+                  className={`text-[7px] font-bold uppercase tracking-widest ${
+                    isCritical
+                      ? "text-red-500 italic font-black"
+                      : "text-zinc-500"
+                  }`}
+                >
+                  {level}
+                </span>
+                <span
+                  className={`text-xs font-mono font-bold leading-none ${colorClass}`}
+                >
+                  {value}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <MapContainer
@@ -160,12 +182,9 @@ export function MapEngine({ assets }: { assets: Asset[] }) {
           attribution="&copy; CARTO"
           url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
         />
-
         <InitialBounds assets={assets} />
         <RiskLayers assets={assets} />
         <AssetMarkers assets={assets} />
-
-        {/* Camada de Labels com opacidade ultra-baixa para não poluir os polígonos */}
         <TileLayer
           attribution="&copy; CARTO"
           url="https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png"
