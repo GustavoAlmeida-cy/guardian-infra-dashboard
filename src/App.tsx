@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "sonner";
 import { List, Globe } from "lucide-react";
 
+// CSS essencial para o Leaflet funcionar
 import "leaflet/dist/leaflet.css";
 
 import { ScenarioToggle } from "./components/dashboard/ScenarioToggle";
@@ -11,10 +12,11 @@ import { SplashScreen } from "./components/dashboard/SplashScreen";
 import { Sidebar } from "./components/dashboard/Sidebar";
 import { AssetDetails } from "./components/dashboard/AssetDetails";
 import { AssetDetailsDrawer } from "./components/dashboard/AssetDetailsDrawer";
-import { MapEngine } from "./components/dashboard/MapEngine";
+import { MapEngine } from "./components/dashboard/MapEngine"; // Importe o componente que criamos
 import { useAssets } from "./hooks/useAssets";
 import { useAssetStore } from "./store/useAssetStore";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Drawer,
   DrawerContent,
@@ -26,6 +28,8 @@ const queryClient = new QueryClient();
 
 function DashboardContent() {
   const { dataSource, selectedAsset } = useAssetStore();
+
+  // Tipagem corrigida para o hook
   const { data: assets = [], isLoading } = useAssets(
     dataSource as "nacional" | "bh"
   );
@@ -53,71 +57,93 @@ function DashboardContent() {
         {showSplash && <SplashScreen key="splash" />}
       </AnimatePresence>
 
-      {/* CAMADA PRINCIPAL: MAPA */}
-      <main className="flex-1 relative h-full bg-zinc-900">
-        {isLoading ? (
-          <div className="absolute inset-0 z-100 flex items-center justify-center bg-zinc-950">
-            {/* ... conteúdo do loading mantido ... */}
-            <div className="text-center space-y-6 z-20">
-              <Globe className="w-16 h-16 text-zinc-800 animate-pulse mx-auto" />
-              <p className="text-zinc-500 animate-pulse text-[10px] font-mono tracking-[0.3em] uppercase">
-                Sincronizando Rede Guardian...
-              </p>
+      <section className="flex-1 relative flex flex-col h-full overflow-hidden">
+        <AnimatePresence>
+          {selectedAsset &&
+            (isMobile ? (
+              <AssetDetailsDrawer key="mobile-drawer" />
+            ) : (
+              <AssetDetails key={selectedAsset.id} />
+            ))}
+        </AnimatePresence>
+
+        {/* HUD de Controles superiores */}
+        <div className="absolute top-6 right-6 z-1000">
+          <ScenarioToggle />
+        </div>
+
+        {/* CONTAINER DO MAPA / LOADING */}
+        <div className="flex-1 relative z-0">
+          {isLoading ? (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950">
+              <div
+                className="absolute inset-0 opacity-20"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 2px 2px, #3f3f46 1px, transparent 0)`,
+                  backgroundSize: "40px 40px",
+                }}
+              />
+
+              <motion.div
+                initial={{ y: "-100%" }}
+                animate={{ y: "100%" }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 w-full h-20 bg-linear-to-b from-transparent via-red-500/10 to-transparent z-0"
+              />
+
+              <div className="text-center space-y-6 z-20">
+                <div className="relative">
+                  <Globe className="w-16 h-16 text-zinc-800 animate-pulse mx-auto" />
+                  <motion.div
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute inset-0 bg-red-600 rounded-full blur-2xl"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-zinc-500 animate-pulse text-[10px] font-mono tracking-[0.3em] uppercase">
+                    Sincronizando Rede Guardian...
+                  </p>
+                  <div className="flex justify-center gap-1">
+                    <Skeleton className="h-0.5 w-8 bg-red-600/30" />
+                    <Skeleton className="h-0.5 w-12 bg-red-600/50" />
+                    <Skeleton className="h-0.5 w-8 bg-red-600/30" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ) : (
-          <MapEngine assets={assets} />
-        )}
-
-        {/* CAMADA DE INTERFACE (HUD) - SOBREPOSTA AO MAPA */}
-        <div className="absolute inset-0 pointer-events-none z-50">
-          {/* Top Bar / Controles */}
-          <div className="absolute top-6 right-6 pointer-events-auto">
-            <ScenarioToggle />
-          </div>
-
-          {/* Detalhes do Ativo (Desktop) */}
-          <AnimatePresence>
-            {selectedAsset && !isMobile && (
-              <div className="absolute top-24 right-6 pointer-events-auto w-96 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                <AssetDetails key={selectedAsset.id} />
-              </div>
-            )}
-          </AnimatePresence>
-
-          {/* Mobile UI Elements */}
-          {isMobile && (
-            <>
-              <AnimatePresence>
-                {selectedAsset && <AssetDetailsDrawer key="mobile-drawer" />}
-              </AnimatePresence>
-
-              <div className="absolute bottom-8 right-6 pointer-events-auto">
-                <Drawer>
-                  <DrawerTrigger asChild>
-                    <Button
-                      size="icon"
-                      className="h-14 w-14 rounded-full bg-red-600 hover:bg-red-700 shadow-2xl border-none active:scale-90"
-                    >
-                      <List className="text-white" size={24} />
-                    </Button>
-                  </DrawerTrigger>
-                  <DrawerContent className="bg-zinc-950 border-zinc-800 h-[85vh]">
-                    <DrawerTitle className="sr-only">
-                      Menu de Ativos
-                    </DrawerTitle>
-                    <Sidebar assets={assets} isMobile={true} />
-                  </DrawerContent>
-                </Drawer>
-              </div>
-            </>
+          ) : (
+            /* COMPONENTE DE MAPA REAL */
+            <MapEngine assets={assets} />
           )}
         </div>
-      </main>
 
-      {/* BARRA LATERAL (DESKTOP) - FIXA À ESQUERDA OU DIREITA */}
+        {/* LISTA DE ATIVOS MOBILE */}
+        {isMobile && (
+          <div className="absolute bottom-8 right-6 z-20">
+            <Drawer>
+              <DrawerTrigger asChild>
+                <Button
+                  size="icon"
+                  className="h-14 w-14 cursor-pointer rounded-full bg-red-600 hover:bg-red-700 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-none transition-transform active:scale-90"
+                >
+                  <List className="text-white" size={24} />
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="bg-zinc-950 border-zinc-800 h-[85vh] outline-none">
+                <DrawerTitle className="sr-only">Menu de Ativos</DrawerTitle>
+                <div className="overflow-hidden h-full pt-2">
+                  <Sidebar assets={assets} isMobile={true} />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          </div>
+        )}
+      </section>
+
       {!isMobile && (
-        <aside className="w-auto border-l border-zinc-900 h-full bg-zinc-950/50 backdrop-blur-xl z-60 relative overflow-hidden">
+        <aside className="w-96 border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20">
           <Sidebar assets={assets} />
         </aside>
       )}
@@ -128,7 +154,15 @@ function DashboardContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-center" theme="dark" richColors />
+      <Toaster
+        position="top-center"
+        theme="dark"
+        richColors
+        closeButton
+        toastOptions={{
+          style: { background: "#09090b", border: "1px solid #27272a" },
+        }}
+      />
       <DashboardContent />
     </QueryClientProvider>
   );
