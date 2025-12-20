@@ -121,11 +121,11 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                   key={asset.id}
                   onClick={() => handleSelectAsset(asset)}
                   className={`${
-                    isMobile ? "w-full" : "w-[80%]"
+                    isMobile ? "w-full" : "w-76"
                   } text-left p-4 rounded-xl transition-all cursor-pointer border relative overflow-hidden group mb-1 ${
                     isSelected
                       ? "bg-zinc-900 border-zinc-700 shadow-xl"
-                      : "border-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900/30"
+                      : "border-zinc-900/80 hover:border-zinc-700 hover:bg-zinc-900/30"
                   }`}
                 >
                   {isSelected && (
@@ -201,12 +201,20 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
       </ScrollArea>
 
       <div className="p-4 bg-zinc-950/80 border-t border-zinc-900">
-        <div className="flex items-center justify-between text-[10px] font-mono text-zinc-600">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
-            <span>SISTEMA ATIVO</span>
+        <div className="flex flex-col gap-1 text-[9px] font-mono text-zinc-600">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-emerald-500">
+              <div className="h-1 w-1 rounded-full bg-current animate-pulse" />
+              <span>SISTEMA ATIVO</span>
+            </div>
+            <span className="uppercase">Latência: 24ms</span>
           </div>
-          <span className="opacity-50 tracking-tighter">SECURED NODE</span>
+          <div className="flex justify-between border-t border-zinc-900/50 pt-1 mt-1">
+            <span>ÚLTIMA ATUALIZAÇÃO:</span>
+            <span className="text-zinc-400">
+              {useAssetStore.getState().lastUpdate.toLocaleTimeString()}
+            </span>
+          </div>
         </div>
       </div>
     </aside>
