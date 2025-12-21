@@ -1,39 +1,34 @@
 {
   "compilerOptions": {
-    /* Otimização de Cache */
+    "composite": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-
-    /* Configuração de Target para Navegadores Modernos */
     "target": "ES2022",
-    "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"], // Essencial para reconhecer importações de .svg, .css, etc.
     "skipLibCheck": true,
 
-    /* Estratégia do Bundler (Vite) */
+    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true, // Garante que imports de tipos sejam tratados corretamente
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true, // O Vite (esbuild) cuida da emissão, o TS apenas checa tipos
+    "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Regras de Rigor Acadêmico (Qualidade Senior) */
+    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true, // Evita importar CSS que não existe
 
-    /* Mapeamento de Caminhos (Aliases) */
-    "baseUrl": ".",
+    /* Aliases - Configuração Moderna sem baseUrl */
     "paths": {
       "@/*": ["./src/*"]
     },
 
-    "ignoreDeprecations": "6.0"
+    /* Silencia avisos de depreciação de versões anteriores */
+    "ignoreDeprecations": "5.0"
   },
   "include": ["src"]
 }
