@@ -8,8 +8,8 @@
 
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { useAssetStore } from "@/store/useAssetStore";
-import { MetricCard } from "@/components/dashboard/TacticalBase";
-import { ForecastChart } from "@/components/dashboard/ForecastChart";
+import { MetricCard } from "@/components/dashboard/tacticals/TacticalBase";
+import { ForecastChart } from "@/components/dashboard/others/ForecastChart";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {

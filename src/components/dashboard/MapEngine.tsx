@@ -12,9 +12,9 @@ import { Maximize } from "lucide-react";
 import type { Asset } from "@/@types/asset";
 
 // --- IMPORTAÇÃO DE COMPONENTES DE CAMADA E UI ---
-import { AssetMarkers } from "./AssetMarkers";
-import { RiskLayers } from "./RiskLayers";
-import { TacticalHUD } from "./TacticalHUD";
+import { AssetMarkers } from "./assets/AssetMarkers";
+import { RiskLayers } from "./maps/RiskLayers";
+import { TacticalHUD } from "./tacticals/TacticalHUD";
 
 // --- CONFIGURAÇÕES GLOBAIS ---
 /** Limites máximos do mapa para evitar panning infinito fora do globo */

@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { Button } from "@/components/ui/button";
-import { MetricCard, CommandButton } from "@/components/dashboard/TacticalBase";
-import { ForecastChart } from "@/components/dashboard/ForecastChart";
+import { MetricCard, CommandButton } from "@/components/dashboard/tacticals/TacticalBase";
+import { ForecastChart } from "@/components/dashboard/others/ForecastChart";
 
 export function AssetDetails() {
   // Centralização da lógica: O hook orquestra desde as cores do risco até o temporizador de cancelamento
@@ -91,7 +91,7 @@ export function AssetDetails() {
             size="icon"
             disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100/10 disabled:opacity-20 disabled:cursor-not-allowed"
+            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </Button>

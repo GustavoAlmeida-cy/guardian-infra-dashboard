@@ -1,7 +1,9 @@
+"use client";
+
 /**
  * GUARDIAN INFRA - CORE APPLICATION
  * Arquitetura: React 19 + TanStack Query V5 + Zustand
- * Foco: Monitoramento de infraestrutura tática e resiliência climática.
+ * Objetivo: Orquestrar o monitoramento tático, alertas críticos e sincronização de dados.
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -13,13 +15,13 @@ import { List, Globe, AlertTriangle } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 // Components: Dashboard
-import { ScenarioToggle } from "./components/dashboard/ScenarioToggle";
-import { SplashScreen } from "./components/dashboard/SplashScreen";
+import { ScenarioToggle } from "./components/dashboard/others/ScenarioToggle";
+import { SplashScreen } from "./components/dashboard/others/SplashScreen";
 import { Sidebar } from "./components/dashboard/Sidebar";
-import { AssetDetails } from "./components/dashboard/AssetDetails";
-import { AssetDetailsDrawer } from "./components/dashboard/AssetDetailsDrawer";
+import { AssetDetails } from "./components/dashboard/assets/AssetDetails";
+import { AssetDetailsDrawer } from "./components/dashboard/assets/AssetDetailsDrawer";
 import { MapEngine } from "./components/dashboard/MapEngine";
-import { TacticalToast } from "./components/dashboard/TacticalToast";
+import { TacticalToast } from "./components/dashboard/tacticals/TacticalToast";
 
 // Hooks & State
 import { useAssets } from "./hooks/useAssets";
@@ -35,7 +37,6 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
-// 1. Instância do QueryClient fora para estabilidade de cache
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -47,7 +48,7 @@ const queryClient = new QueryClient({
 
 /**
  * @component AutomatedAlerts
- * Gerencia notificações críticas via Toast baseado no estado dos assets.
+ * Monitora ativos críticos e dispara notificações.
  */
 function AutomatedAlerts({
   assets,
@@ -74,15 +75,15 @@ function AutomatedAlerts({
       if (isCritical && !alertedIds.current.has(asset.id)) {
         alertedIds.current.add(asset.id);
 
-        // CORREÇÃO: Passamos o t (toast instance) para poder chamar o dismiss no onClose
         toast.custom(
           (t) => (
             <TacticalToast
+              t={t}
               variant="danger"
               title="SISTEMA: RISCO CRÍTICO"
               icon={<AlertTriangle size={18} className="animate-pulse" />}
               description={`Emergência em ${asset.nome}. Inicie protocolos.`}
-              onClose={() => toast.dismiss(t)} // <--- AGORA O BOTÃO VAI FUNCIONAR
+              onClose={() => toast.dismiss(t)}
             />
           ),
           { duration: 10000, id: toastId }
@@ -99,7 +100,7 @@ function AutomatedAlerts({
 
 /**
  * @component DashboardContent
- * Layout principal e lógica de sincronização de dados.
+ * Layout e sincronização de dados.
  */
 function DashboardContent() {
   const { dataSource, selectedAsset, setSelectedAsset, setLastUpdate } =
@@ -111,7 +112,7 @@ function DashboardContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Responsividade: Detecção de Viewport
+  // Responsividade
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
@@ -119,7 +120,7 @@ function DashboardContent() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // UX: Lifecycle da Splash Screen
+  // Splash Screen Lifecycle
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -127,22 +128,20 @@ function DashboardContent() {
     }
   }, [isLoading]);
 
-  // Data Sync: Atualiza dados do asset selecionado em tempo real
+  // Sincronização de Dados e Dependências Corrigidas
   useEffect(() => {
     if (assets.length > 0) {
       setLastUpdate(new Date());
 
       if (selectedAsset) {
         const freshData = assets.find((a) => a.id === selectedAsset.id);
-
-        // CORREÇÃO: Removido '.status' inexistente. Compara apenas risco ou string completa
         if (freshData && freshData.risco_atual !== selectedAsset.risco_atual) {
           setSelectedAsset(freshData);
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assets, selectedAsset?.id]); // Dependência otimizada para evitar loops
+    // Incluídas as funções estáveis do store e o objeto de comparação
+  }, [assets, selectedAsset, setSelectedAsset, setLastUpdate]);
 
   return (
     <main
@@ -159,10 +158,7 @@ function DashboardContent() {
         {showSplash && <SplashScreen key="splash" />}
       </AnimatePresence>
 
-      <section
-        className="flex-1 relative flex flex-col h-full overflow-hidden"
-        aria-label="Visualização do Mapa"
-      >
+      <section className="flex-1 relative flex flex-col h-full overflow-hidden">
         <AnimatePresence>
           {selectedAsset &&
             (isMobile ? (
@@ -172,17 +168,14 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-6 right-6 z-1001" role="complementary">
+        <div className="absolute top-6 right-6 z-1001">
           <ScenarioToggle />
         </div>
 
         <div className="flex-1 relative z-0">
           {isLoading ? (
-            <div
-              className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950"
-              role="status"
-            >
-              <div className="text-center space-y-6 z-20">
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950">
+              <div className="text-center space-y-6">
                 <Globe className="w-16 h-16 text-zinc-800 animate-pulse mx-auto" />
                 <p className="text-zinc-500 text-[10px] font-mono tracking-[0.3em] uppercase">
                   Sincronizando Rede...
@@ -194,20 +187,18 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Mobile: Acesso rápido via Drawer */}
         {isMobile && (
           <nav className="absolute bottom-8 right-6 z-20">
             <Drawer>
               <DrawerTrigger asChild>
                 <Button
                   size="icon"
-                  aria-label="Abrir lista de ativos"
-                  className="h-14 w-14 rounded-full bg-red-600 hover:bg-red-700 shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all active:scale-95 border-none"
+                  className="h-14 w-14 rounded-full bg-red-600 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-none"
                 >
                   <List className="text-white" size={24} />
                 </Button>
               </DrawerTrigger>
-              <DrawerContent className="bg-zinc-950 border-zinc-800 h-[85vh] outline-none">
+              <DrawerContent className="bg-zinc-950 border-zinc-800 h-[85vh]">
                 <DrawerTitle className="sr-only">Menu de Ativos</DrawerTitle>
                 <div className="overflow-hidden h-full pt-2">
                   <Sidebar assets={assets} isMobile={true} />
@@ -218,12 +209,8 @@ function DashboardContent() {
         )}
       </section>
 
-      {/* Desktop: Sidebar Fixa */}
       {!isMobile && (
-        <aside
-          className="w-auto border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20"
-          aria-label="Lista de Ativos e Filtros"
-        >
+        <aside className="w-auto border-l border-zinc-900 h-full bg-zinc-950 shadow-[-20px_0_50px_rgba(0,0,0,0.4)] z-20">
           <Sidebar assets={assets} />
         </aside>
       )}
@@ -239,10 +226,7 @@ export default function App() {
         theme="dark"
         expand={true}
         visibleToasts={5}
-        toastOptions={{
-          unstyled: true,
-          className: "w-full flex justify-center md:justify-end px-4 md:px-6",
-        }}
+        toastOptions={{ unstyled: true }}
       />
       <DashboardContent />
     </QueryClientProvider>

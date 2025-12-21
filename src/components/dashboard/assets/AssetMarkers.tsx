@@ -14,7 +14,7 @@ import type { Asset, RiskLevel } from "@/@types/asset";
 import {
   TacticalTooltipContent,
   TACTICAL_TOOLTIP_CLASS,
-} from "./TacticalTooltip";
+} from "../tacticals/TacticalTooltip";
 
 /**
  * Cores de risco consistentes com o design system tático.

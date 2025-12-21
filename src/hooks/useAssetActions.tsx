@@ -8,7 +8,7 @@
 
 import { useMemo, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { TacticalToast } from "@/components/dashboard/TacticalToast";
+import { TacticalToast } from "@/components/dashboard/tacticals/TacticalToast";
 import {
   TrendingUp,
   AlertCircle,
@@ -20,7 +20,7 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import { useAssetStore } from "@/store/useAssetStore";
-import type { ForecastDataPoint } from "@/components/dashboard/ForecastChart";
+import type { ForecastDataPoint } from "@/components/dashboard/others/ForecastChart";
 
 // FUNÇÃO AUXILIAR: Gera dados fictícios para o gráfico baseados na severidade do risco
 const generateForecastData = (baseRisk: string): ForecastDataPoint[] => {

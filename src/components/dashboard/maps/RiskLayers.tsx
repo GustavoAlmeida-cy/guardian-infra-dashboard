@@ -12,7 +12,7 @@ import type { Asset } from "@/@types/asset";
 import {
   TacticalTooltipContent,
   TACTICAL_TOOLTIP_CLASS,
-} from "./TacticalTooltip";
+} from "../tacticals/TacticalTooltip";
 
 /**
  * Cores semânticas baseadas no nível de risco para consistência visual.

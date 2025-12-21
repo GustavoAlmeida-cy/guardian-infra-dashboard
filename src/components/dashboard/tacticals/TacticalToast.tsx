@@ -1,5 +1,9 @@
+"use client";
+
 /**
- * @file TacticalToast.tsx
+ * COMPONENTE: TacticalToast
+ * DESCRIÇÃO: Sistema de notificação customizado com estética militar/cyberpunk.
+ * FUNCIONAMENTO: Integrado com a biblioteca 'sonner', suporta múltiplos estados críticos.
  */
 
 import type { ReactNode, MouseEvent } from "react";
@@ -8,11 +12,12 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 
 interface TacticalToastProps {
-  t: string | number;
-  title: string;
-  description?: string;
-  icon?: ReactNode;
-  variant?: "danger" | "info" | "success" | "warning" | "neutral"; // Adicionado neutral
+  t?: string | number; // CORREÇÃO: Tornado opcional para evitar erro ts(2741)
+  title: string; // Título em caixa alta
+  description?: string; // Detalhes técnicos da notificação
+  icon?: ReactNode; // Ícone tático (Lucide)
+  variant?: "danger" | "info" | "success" | "warning" | "neutral";
+  onClose?: () => void; // Callback para suportar chamadas externas de fechamento
 }
 
 export function TacticalToast({
@@ -21,6 +26,7 @@ export function TacticalToast({
   description,
   icon,
   variant = "info",
+  onClose,
 }: TacticalToastProps) {
   // --- CONFIGURAÇÃO DE TEMAS ---
   const variants = {
@@ -55,18 +61,28 @@ export function TacticalToast({
     neutral: {
       border: "border-zinc-500/30",
       bg: "bg-zinc-500/5",
-      accent: "bg-white", // Acento em branco puro
-      text: "text-white", // Título e ícone em branco
+      accent: "bg-white",
+      text: "text-white",
       shadow: "shadow-zinc-900/20",
     },
   };
 
   const theme = variants[variant];
 
+  /**
+   * INTERCEPTADOR DE DISMISS:
+   * Prioriza o onClose (que geralmente contém toast.dismiss(t))
+   * mas oferece fallback para toast.dismiss(t) caso 't' exista.
+   */
   const handleDismiss = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.dismiss(t);
+
+    if (onClose) {
+      onClose();
+    } else if (t) {
+      toast.dismiss(t);
+    }
   };
 
   return (
