@@ -167,7 +167,7 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-10 right-4 z-1001">
+        <div className="absolute top-8 right-6 z-1001">
           <ScenarioToggle />
         </div>
 
@@ -187,7 +187,7 @@ function DashboardContent() {
         </div>
 
         {isMobile && (
-          <nav className="absolute bottom-10 right-6 z-20">
+          <nav className="absolute bottom-18 md:bottom-10 right-6 z-20">
             <Drawer>
               <DrawerTrigger asChild>
                 <Button

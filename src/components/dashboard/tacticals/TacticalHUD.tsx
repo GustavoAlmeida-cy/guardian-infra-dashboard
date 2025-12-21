@@ -52,7 +52,7 @@ export function TacticalHUD({ assets }: TacticalHUDProps) {
 
   return (
     <div
-      className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-500 
+      className="hidden md:flex absolute bottom-10 left-1/2 -translate-x-1/2 z-500 
                   bg-zinc-950/60 backdrop-blur-md p-1 border border-zinc-800/40 
                  rounded-xl shadow-2xl transition-all"
     >

@@ -183,7 +183,7 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
   const { safeFly } = useSafeFly();
 
   return (
-    <div className="absolute bottom-10 left-6 md:bottom-6 md:left-6 z-500">
+    <div className="absolute bottom-18 left-6 md:bottom-10 z-500">
       <button
         onClick={() => {
           const bounds =
