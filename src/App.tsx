@@ -167,7 +167,7 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-8 right-6 z-1001">
+        <div className="absolute top-8 right-6 z-50">
           <ScenarioToggle />
         </div>
 
