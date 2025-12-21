@@ -5,14 +5,13 @@
  * Arquitetura: React 19 + TanStack Query V5 + Zustand
  * Objetivo: Orquestrar o monitoramento tático, alertas críticos e sincronização de dados.
  */
+import "leaflet/dist/leaflet.css";
 
 import { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence } from "framer-motion";
 import { Toaster, toast } from "sonner";
 import { List, Globe, AlertTriangle } from "lucide-react";
-
-import "leaflet/dist/leaflet.css";
 
 // Components: Dashboard
 import { ScenarioToggle } from "./components/dashboard/others/ScenarioToggle";
@@ -168,7 +167,7 @@ function DashboardContent() {
             ))}
         </AnimatePresence>
 
-        <div className="absolute top-6 right-6 z-1001">
+        <div className="absolute top-10 right-4 z-1001">
           <ScenarioToggle />
         </div>
 
@@ -188,7 +187,7 @@ function DashboardContent() {
         </div>
 
         {isMobile && (
-          <nav className="absolute bottom-8 right-6 z-20">
+          <nav className="absolute bottom-10 right-6 z-20">
             <Drawer>
               <DrawerTrigger asChild>
                 <Button
