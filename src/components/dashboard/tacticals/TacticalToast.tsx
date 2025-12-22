@@ -2,8 +2,8 @@
 
 /**
  * COMPONENTE: TacticalToast
- * DESCRIÇÃO: Sistema de notificação customizado com estética militar/cyberpunk.
- * FUNCIONAMENTO: Integrado com a biblioteca 'sonner', suporta múltiplos estados críticos.
+ * DESCRIÇÃO: Sistema de notificação com estética militar/cyberpunk.
+ * ATUALIZAÇÃO: Implementado suporte a gestos nativos de "Swipe" para fechar no mobile.
  */
 
 import type { ReactNode, MouseEvent } from "react";
@@ -12,12 +12,12 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 
 interface TacticalToastProps {
-  t?: string | number; // CORREÇÃO: Tornado opcional para evitar erro ts(2741)
-  title: string; // Título em caixa alta
-  description?: string; // Detalhes técnicos da notificação
-  icon?: ReactNode; // Ícone tático (Lucide)
+  t?: string | number;
+  title: string;
+  description?: string;
+  icon?: ReactNode;
   variant?: "danger" | "info" | "success" | "warning" | "neutral";
-  onClose?: () => void; // Callback para suportar chamadas externas de fechamento
+  onClose?: () => void;
 }
 
 export function TacticalToast({
@@ -70,14 +70,9 @@ export function TacticalToast({
   const theme = variants[variant];
 
   /**
-   * INTERCEPTADOR DE DISMISS:
-   * Prioriza o onClose (que geralmente contém toast.dismiss(t))
-   * mas oferece fallback para toast.dismiss(t) caso 't' exista.
+   * FUNÇÃO DE FECHAMENTO CENTRALIZADA
    */
-  const handleDismiss = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+  const triggerClose = () => {
     if (onClose) {
       onClose();
     } else if (t) {
@@ -85,19 +80,45 @@ export function TacticalToast({
     }
   };
 
+  const handleDismiss = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerClose();
+  };
+
   return (
     <motion.div
+      // --- LÓGICA DE GESTOS (SWIPE TO DISMISS) ---
+      drag="x" // Permite arrastar horizontalmente
+      dragConstraints={{ left: 0, right: 0 }} // Efeito mola para retornar ao centro
+      dragElastic={0.7}
+      onDragEnd={(_, info) => {
+        // Se o usuário arrastar mais de 100px para qualquer lado, fecha o toast
+        if (Math.abs(info.offset.x) > 100) {
+          triggerClose();
+        }
+      }}
+      // --- ANIMAÇÕES ---
       initial={{ opacity: 0, y: 15, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
+      exit={{
+        opacity: 0,
+        scale: 0.8,
+        x: 50, // Sai lateralmente para reforçar o gesto de swipe
+        transition: { duration: 0.2 },
+      }}
+      whileTap={{ scale: 0.98 }} // Feedback tátil ao clicar/tocar
+      // --- ESTILIZAÇÃO ---
       className={`
         relative flex overflow-hidden rounded-lg
         bg-zinc-950/95 border ${theme.border}
         backdrop-blur-xl shadow-2xl ${theme.shadow}
         w-[calc(100vw-32px)] md:w-80 
         mx-auto md:mx-0 group
+        touch-none select-none cursor-grab active:cursor-grabbing
       `}
     >
+      {/* Barra Lateral de Destaque */}
       <div className={`w-1 ${theme.accent} shrink-0`} />
 
       <div className="flex gap-3 p-4 items-start w-full pr-10">
@@ -127,6 +148,7 @@ export function TacticalToast({
         </div>
       </div>
 
+      {/* Botão X (Fallback para Desktop) */}
       <button
         type="button"
         onClick={handleDismiss}
@@ -135,6 +157,7 @@ export function TacticalToast({
         <X size={14} />
       </button>
 
+      {/* Efeito Glow de Fundo */}
       <div
         className={`absolute -top-4 -right-4 w-12 h-12 rounded-full blur-2xl opacity-10 ${theme.accent} pointer-events-none z-0`}
       />
