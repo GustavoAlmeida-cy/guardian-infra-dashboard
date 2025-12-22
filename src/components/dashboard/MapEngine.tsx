@@ -185,6 +185,7 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
   return (
     <div className="absolute bottom-18 left-6 md:bottom-10 z-500">
       <button
+        title="Enquadrar todos os ativos no mapa"
         onClick={() => {
           const bounds =
             assets.length > 0
@@ -197,13 +198,10 @@ function ZoomOutButton({ assets }: { assets: Asset[] }) {
               : WORLD_BOUNDS;
           safeFly(bounds);
         }}
-        className="flex cursor-pointer items-center gap-2 bg-zinc-900 border border-zinc-700 text-zinc-300 px-4 py-2 rounded-lg 
+        className="flex cursor-pointer items-center gap-2 bg-zinc-900 border border-zinc-700 text-zinc-300 p-2 rounded-lg 
                    hover:bg-zinc-800 hover:text-white transition-all active:scale-95 shadow-lg group"
       >
-        <Maximize size={14} className="group-hover:text-white" />
-        <span className="text-[10px] font-bold uppercase tracking-widest">
-          Geral
-        </span>
+        <Maximize size={30} className="group-hover:text-white" />
       </button>
     </div>
   );

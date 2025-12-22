@@ -51,6 +51,7 @@ export function ScenarioToggle() {
     <div className="relative z-1001 flex flex-col gap-2">
       {/* TRIGGER: Botão de Seleção Principal */}
       <button
+        title="Alterar Cenário de Dados"
         onClick={() => setIsOpen(!isOpen)}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
