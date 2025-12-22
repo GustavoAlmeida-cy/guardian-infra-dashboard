@@ -128,7 +128,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
           <Input
             placeholder="Filtrar infraestrutura..."
             disabled={isLoading}
-            className="pl-9 bg-zinc-900/40 border-zinc-800 focus:border-red-500/50 focus:ring-red-500/20 text-xs h-10 transition-all"
+            className="pl-9 bg-zinc-900/40 border-zinc-800 focus:border-red-500/50 focus:ring-red-500/20 text-xs h-10 transition-all text-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
