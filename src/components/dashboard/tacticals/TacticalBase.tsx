@@ -27,6 +27,7 @@ export const MetricCard = ({
   className,
 }: MetricCardProps) => (
   <div
+    title={`${label}: ${value}`}
     className={cn(
       "space-y-2 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/50 text-left transition-colors hover:border-zinc-700",
       className
@@ -75,6 +76,7 @@ export const CommandButton = ({
     return (
       <Button
         {...props}
+        title={typeof children === "string" ? children : undefined}
         onClick={onClick}
         disabled={disabled}
         variant="outline"
@@ -95,6 +97,7 @@ export const CommandButton = ({
   return (
     <Button
       {...props}
+      title={typeof children === "string" ? children : undefined}
       onClick={onClick}
       disabled={disabled}
       className={cn(

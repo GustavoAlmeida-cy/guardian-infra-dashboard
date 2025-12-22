@@ -92,7 +92,7 @@ export function AssetDetails() {
             </div>
           </div>
 
-          {/* Botão Fechar Corrigido */}
+          {/* Botão Fechar */}
           <Button
             variant="ghost"
             size="icon"
