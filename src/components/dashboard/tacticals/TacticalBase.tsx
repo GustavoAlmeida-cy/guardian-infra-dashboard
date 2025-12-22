@@ -3,7 +3,7 @@
 /**
  * COMPONENTES: TacticalBase
  * DESCRIÇÃO: Elementos atômicos da interface (Cards e Botões).
- * FOCO: Alta performance e fidelidade visual ao tema "Cyber/Military" Dark.
+ * ATUALIZAÇÃO: Inserida lógica de bloqueio de segurança para riscos Moderado/Baixo.
  */
 
 import type { ElementType, ReactNode, ButtonHTMLAttributes } from "react";
@@ -15,7 +15,7 @@ interface MetricCardProps {
   label: string;
   value: string | number;
   icon: ElementType;
-  color?: string; // Cor dinâmica para o valor (ex: vermelho para crítico)
+  color?: string;
   className?: string;
 }
 
@@ -33,12 +33,10 @@ export const MetricCard = ({
       className
     )}
   >
-    {/* Label: Texto ultra-reduzido e em caixa alta para estética tática */}
     <span className="text-[9px] text-zinc-500 uppercase font-black flex items-center gap-1 tracking-wider">
       <Icon size={10} /> {label}
     </span>
 
-    {/* Value: Destaque visual com suporte a cores temáticas */}
     <div
       className="text-xs font-black italic uppercase tracking-tighter truncate"
       style={{ color }}
@@ -48,13 +46,13 @@ export const MetricCard = ({
   </div>
 );
 
-// --- CommandButton: Abstração sobre o botão do Shadcn para ações de alto risco ---
-// Nota: 'ButtonHTMLAttributes' garante que o botão suporte 'type="submit"', 'id', etc.
+// --- CommandButton: Abstração com trava de segurança baseada em risco ---
 interface CommandButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "outline";
   icon: ElementType;
   children: ReactNode;
-  color?: string; // Cor do tema (riskTheme.color) injetada pelo hook
+  color?: string;
+  risco?: "Crítico" | "Alto" | "Moderado" | "Baixo" | string; // Prop para controle de lógica
 }
 
 export const CommandButton = ({
@@ -64,63 +62,77 @@ export const CommandButton = ({
   children,
   color,
   disabled,
+  risco,
   className,
   ...props
 }: CommandButtonProps) => {
-  // Estilos de comportamento (feedback de clique e estado desativado)
-  const commonStyles =
-    "h-11 text-[11px] font-black uppercase transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50";
+  // Lógica de Bloqueio: Botões ficam inativos para risco Moderado e Baixo
+  const isLockedByRisk = risco === "Moderado" || risco === "Baixo";
+  const isEffectivelyDisabled = disabled || isLockedByRisk;
 
-  // VARIANTE OUTLINE: Usada para ações secundárias (ex: Auditoria/Protocolo)
+  const commonStyles = cn(
+    "h-11 text-[11px] font-black uppercase transition-all active:scale-95",
+    "disabled:cursor-not-allowed disabled:opacity-40",
+    className
+  );
+
+  // Mensagem de auxílio no hover caso esteja travado
+  const tooltipTitle = isLockedByRisk
+    ? "Ação bloqueada: Nível de risco insuficiente"
+    : typeof children === "string"
+    ? children
+    : undefined;
+
+  // VARIANTE OUTLINE
   if (variant === "outline") {
     return (
       <Button
         {...props}
-        title={typeof children === "string" ? children : undefined}
+        title={tooltipTitle}
         onClick={onClick}
-        disabled={disabled}
+        disabled={isEffectivelyDisabled}
         variant="outline"
         className={cn(
           "border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800 gap-2 text-zinc-400 hover:text-white",
-          commonStyles,
-          className
+          commonStyles
         )}
       >
-        {/* Feedback visual: Ícone gira se o botão estiver em estado de loading/disabled */}
-        <Icon size={16} className={cn(disabled && "animate-spin")} />
+        <Icon
+          size={16}
+          className={cn(
+            isEffectivelyDisabled && !isLockedByRisk && "animate-spin"
+          )}
+        />
         {children}
       </Button>
     );
   }
 
-  // VARIANTE PRIMARY: Usada para a ação principal (ex: Acionar Resposta)
+  // VARIANTE PRIMARY
   return (
     <Button
       {...props}
-      title={typeof children === "string" ? children : undefined}
+      title={tooltipTitle}
       onClick={onClick}
-      disabled={disabled}
+      disabled={isEffectivelyDisabled}
       className={cn(
         "group relative gap-0 text-white border-none shadow-lg shadow-black/40 overflow-hidden",
-        commonStyles,
-        className
+        commonStyles
       )}
       style={{
-        // Fallback para zinco se desativado, caso contrário assume a cor do risco
-        backgroundColor: disabled ? "#27272a" : color,
+        backgroundColor: isEffectivelyDisabled ? "#27272a" : color,
       }}
     >
-      {/* EFEITO DE HOVER: Overlay de brilho que desliza de baixo para cima */}
-      {!disabled && (
+      {/* Efeito de brilho apenas se estiver ativo */}
+      {!isEffectivelyDisabled && (
         <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
       )}
 
-      {/* Ícone com animação de pulso para indicar "Sistema Ativo/Pronto" */}
       <Icon
         size={16}
         className={cn(
           "mr-2 fill-current",
-          disabled ? "animate-spin" : "animate-pulse"
+          isEffectivelyDisabled ? "opacity-50" : "animate-pulse"
         )}
       />
       {children}

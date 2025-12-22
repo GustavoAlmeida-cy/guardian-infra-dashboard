@@ -166,6 +166,7 @@ export function AssetDetails() {
                     onClick={handleAction}
                     icon={Zap}
                     color={riskTheme.color}
+                    risco={selectedAsset.risco_atual}
                     className="cursor-pointer"
                   >
                     ACIONAR RESPOSTA
@@ -175,6 +176,7 @@ export function AssetDetails() {
                     onClick={handleProtocol}
                     icon={ShieldCheck}
                     variant="outline"
+                    risco={selectedAsset.risco_atual}
                     className="cursor-pointer"
                   >
                     PROTOCOLO
