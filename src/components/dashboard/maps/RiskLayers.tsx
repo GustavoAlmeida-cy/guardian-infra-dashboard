@@ -97,7 +97,7 @@ const AssetHexagon = memo(
           fillColor: color,
           // A opacidade aumenta conforme o usuário se aproxima do asset
           fillOpacity: isSelected
-            ? 0.7
+            ? 0.5
             : zoom >= ZOOM_THRESHOLD - 3
             ? 0.5
             : 0.2,
