@@ -19,7 +19,10 @@ import {
 } from "lucide-react";
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { Button } from "@/components/ui/button";
-import { MetricCard, CommandButton } from "@/components/dashboard/tacticals/TacticalBase";
+import {
+  MetricCard,
+  CommandButton,
+} from "@/components/dashboard/tacticals/TacticalBase";
 import { ForecastChart } from "@/components/dashboard/others/ForecastChart";
 
 export function AssetDetails() {
@@ -58,9 +61,14 @@ export function AssetDetails() {
         />
 
         {/* HEADER: Informações de Identificação e Localização */}
-        <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start">
-          <div className="space-y-3">
-            <h3 className="text-base font-black text-white italic uppercase tracking-tight">
+        <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-4">
+          <div className="space-y-3 min-w-0">
+            {" "}
+            {/* min-w-0 ajuda a evitar que o texto quebre o layout pai */}
+            <h3
+              title={selectedAsset.nome}
+              className="text-base font-black text-white italic uppercase tracking-tight truncate"
+            >
               {selectedAsset.nome}
             </h3>
             <div className="flex items-center gap-2">
@@ -68,7 +76,6 @@ export function AssetDetails() {
                 ID: {selectedAsset.id}
               </span>
 
-              {/* Clipboard: Mostra feedback de sucesso (Check) ou ícone de cópia */}
               <button
                 onClick={handleCopyCoords}
                 className="flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -85,13 +92,13 @@ export function AssetDetails() {
             </div>
           </div>
 
-          {/* Botão Fechar: Desabilitado durante processamento para evitar fechamento acidental */}
+          {/* Botão Fechar Corrigido */}
           <Button
             variant="ghost"
             size="icon"
             disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-100 disabled:opacity-20 disabled:cursor-not-allowed"
+            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-800/50 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed w-10 h-10 shrink-0 flex items-center justify-center"
           >
             <X size={18} />
           </Button>
