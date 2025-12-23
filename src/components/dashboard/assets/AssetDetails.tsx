@@ -220,7 +220,7 @@ export function AssetDetails() {
                     !hasContingencyActions ? "Baixo" : selectedAsset.risco_atual
                   }
                   disabled={!isActionAvailable}
-                  className="w-full tracking-widest"
+                  className="w-full cursor-pointer tracking-widest"
                 >
                   Acionar Resposta Completa
                 </CommandButton>
@@ -234,7 +234,7 @@ export function AssetDetails() {
               >
                 <Button
                   onClick={handleCancel}
-                  className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-black uppercase italic text-[11px] rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                  className="w-full h-11 bg-white hover:bg-zinc-200 text-black cursor-pointer font-black uppercase italic text-[11px] rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.2)]"
                 >
                   <AlertOctagon size={16} className="mr-2 animate-pulse" />
                   Cancelar Operação Imediatamente
