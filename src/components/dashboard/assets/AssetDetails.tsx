@@ -92,7 +92,10 @@ export function AssetDetails() {
         {/* HEADER: Identificação e Localização */}
         <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-4 shrink-0">
           <div className="space-y-3 min-w-0">
-            <h3 className="text-base font-black text-white italic uppercase tracking-tight truncate">
+            <h3
+              title={selectedAsset.nome}
+              className="text-base font-black text-white italic uppercase tracking-tight truncate"
+            >
               {selectedAsset.nome}
             </h3>
             <div className="flex items-center gap-2">
@@ -119,7 +122,7 @@ export function AssetDetails() {
             size="icon"
             disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="rounded-full text-zinc-400 hover:text-white w-10 h-10 shrink-0 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+            className="rounded-full text-zinc-400 cursor-pointer w-10 h-10 shrink-0 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </Button>
