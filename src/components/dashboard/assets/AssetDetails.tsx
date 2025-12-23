@@ -1,32 +1,33 @@
 "use client";
 
-/**
- * COMPONENTE: AssetDetails (Desktop)
- * DESCRIÇÃO: Painel lateral flutuante para monitoramento tático de ativos.
- * CARACTERÍSTICA: Utiliza estados de "Modo de Emergência" (isProcessing) para alterar a interface.
- */
-
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
   X,
   Zap,
-  ShieldCheck,
   Clock,
   MapPin,
   Copy,
   Check,
   AlertOctagon,
+  ShieldAlert,
 } from "lucide-react";
+
 import { useAssetActions } from "@/hooks/useAssetActions";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ForecastChart } from "@/components/dashboard/others/ForecastChart";
 import {
   MetricCard,
   CommandButton,
+  ContingencyPanel,
 } from "@/components/dashboard/tacticals/TacticalBase";
-import { ForecastChart } from "@/components/dashboard/others/ForecastChart";
 
+/**
+ * PAINEL DE DETALHES TÁTICOS (ASSET DETAILS)
+ * Centraliza monitoramento, projeções e execução de protocolos.
+ */
 export function AssetDetails() {
-  // Centralização da lógica: O hook orquestra desde as cores do risco até o temporizador de cancelamento
   const {
     selectedAsset,
     setSelectedAsset,
@@ -35,13 +36,41 @@ export function AssetDetails() {
     copied,
     isProcessing,
     handleAction,
-    handleProtocol,
     handleCancel,
     handleCopyCoords,
   } = useAssetActions();
 
-  // Previne erros de runtime se o modal for chamado sem um ativo no contexto
+  // Controla a origem da ação para feedback visual no ContingencyPanel
+  const [triggerSource, setTriggerSource] = useState<
+    "global" | "individual" | null
+  >(null);
+
   if (!selectedAsset || !riskTheme) return null;
+
+  // --- REGRAS DE NEGÓCIO ---
+  const contingencyActions = selectedAsset.acoes_contingencia ?? [];
+  const hasContingencyActions = contingencyActions.length > 0;
+
+  // Travas de segurança: protocolos só habilitados em Risco Alto ou Crítico
+  const isRiskLocked =
+    selectedAsset.risco_atual === "Moderado" ||
+    selectedAsset.risco_atual === "Baixo";
+
+  const isActionAvailable = hasContingencyActions && !isRiskLocked;
+
+  // --- HANDLERS ---
+  const onTriggerFullResponse = () => {
+    if (!isActionAvailable) return;
+    setTriggerSource("global");
+    handleAction();
+  };
+
+  const onTriggerSingleResponse = (action: string) => {
+    setTriggerSource("individual");
+    handleAction(action);
+  };
+
+  const isGlobalLoading = isProcessing && triggerSource === "global";
 
   return (
     <AnimatePresence mode="wait">
@@ -50,158 +79,167 @@ export function AssetDetails() {
         initial={{ x: -100, opacity: 0, scale: 0.95 }}
         animate={{ x: 0, opacity: 1, scale: 1 }}
         exit={{ x: -100, opacity: 0, scale: 0.95 }}
-        className="absolute top-6 left-6 w-96 bg-zinc-950/95 border border-zinc-800/50 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden font-sans"
+        className="absolute top-6 left-6 w-96 bg-zinc-950/95 border border-zinc-800/50 rounded-2xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden font-sans flex flex-col h-[calc(100vh-120px)] max-h-212.5"
       >
-        {/* INDICADOR VISUAL SUPERIOR: Responde ao estado de processamento mudando para Branco */}
+        {/* Barra de Status Dinâmica */}
         <div
-          className="h-1.5 w-full transition-all duration-500 ease-in-out"
+          className="h-1.5 w-full transition-all duration-500 ease-in-out shrink-0"
           style={{
             backgroundColor: isProcessing ? "#ffffff" : riskTheme.color,
           }}
         />
 
-        {/* HEADER: Informações de Identificação e Localização */}
-        <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-4">
+        {/* HEADER: Identificação e Localização */}
+        <header className="p-5 bg-zinc-900/30 border-b border-zinc-800/50 flex justify-between items-start gap-4 shrink-0">
           <div className="space-y-3 min-w-0">
-            {" "}
-            {/* min-w-0 ajuda a evitar que o texto quebre o layout pai */}
-            <h3
-              title={selectedAsset.nome}
-              className="text-base font-black text-white italic uppercase tracking-tight truncate"
-            >
+            <h3 className="text-base font-black text-white italic uppercase tracking-tight truncate">
               {selectedAsset.nome}
             </h3>
             <div className="flex items-center gap-2">
               <span className="bg-zinc-800 text-zinc-400 text-[9px] px-1.5 py-0.5 rounded font-mono border border-zinc-700">
                 ID: {selectedAsset.id}
               </span>
-
               <button
                 onClick={handleCopyCoords}
-                className="flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 text-[9px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                className="group flex items-center gap-2 px-2 py-0.5 bg-zinc-900/50 rounded border border-zinc-800/50 text-[9px] font-mono text-zinc-500 hover:text-emerald-400 transition-all cursor-pointer"
               >
                 <MapPin size={10} />
-                {selectedAsset.coordenadas.latitude.toFixed(4)},{" "}
-                {selectedAsset.coordenadas.longitude.toFixed(4)}
+                <span>COPIAR POSIÇÃO</span>
                 {copied ? (
-                  <Check size={10} className="text-emerald-500 ml-1" />
+                  <Check size={10} className="text-emerald-500" />
                 ) : (
-                  <Copy size={10} className="ml-1" />
+                  <Copy size={10} />
                 )}
               </button>
             </div>
           </div>
 
-          {/* Botão Fechar */}
           <Button
             variant="ghost"
             size="icon"
             disabled={isProcessing}
             onClick={() => setSelectedAsset(null)}
-            className="rounded-full text-zinc-400 cursor-pointer hover:bg-zinc-800/50 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed w-10 h-10 shrink-0 flex items-center justify-center"
+            className="rounded-full text-zinc-400 hover:text-white w-10 h-10 shrink-0 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <X size={18} />
           </Button>
         </header>
 
-        <div className="p-6 space-y-8">
-          {/* GRID DE MÉTRICAS: Exibição de dados técnicos do ativo */}
-          <div className="grid grid-cols-3 gap-3">
-            <MetricCard
-              label="Impacto"
-              value={selectedAsset.tempo_estimado_impacto ?? "N/A"}
-              icon={Clock}
-              className="cursor-default"
-            />
-            <MetricCard
-              label="Severidade"
-              value={selectedAsset.risco_atual ?? "Estável"}
-              icon={riskTheme.icon}
-              color={riskTheme.color}
-              className="cursor-default"
-            />
-            <MetricCard
-              label="Tendência"
-              value={riskTheme.trend}
-              icon={riskTheme.icon}
-              color="#a1a1aa"
-              className="cursor-default"
-            />
-          </div>
-
-          {/* SEÇÃO DE ANÁLISE: O gráfico e o label mudam para Branco/Pulse durante a validação */}
-          <div className="space-y-4">
-            <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-black flex items-center gap-2">
-              <div
-                className={`h-2 w-2 rounded-full transition-colors duration-500 ${
-                  isProcessing ? "bg-white animate-pulse" : ""
-                }`}
-                style={{
-                  backgroundColor: !isProcessing ? riskTheme.color : undefined,
-                }}
+        {/* BODY: Monitoramento e Contingência */}
+        <ScrollArea className="flex-1 w-full overflow-hidden">
+          <div className="p-6 space-y-8 pb-10">
+            {/* GRID DE MÉTRICAS */}
+            <div className="grid grid-cols-3 gap-3">
+              <MetricCard
+                label="Impacto"
+                value={selectedAsset.tempo_estimado_impacto ?? "N/A"}
+                icon={Clock}
               />
-              {isProcessing
-                ? "Validação em curso..."
-                : "Projeção de Risco (24h)"}
-            </span>
+              <MetricCard
+                label="Severidade"
+                value={selectedAsset.risco_atual ?? "Estável"}
+                icon={riskTheme.icon}
+                color={riskTheme.color}
+              />
+              <MetricCard
+                label="Tendência"
+                value={riskTheme.trend}
+                icon={riskTheme.icon}
+                color="#a1a1aa"
+              />
+            </div>
 
-            <ForecastChart
-              data={forecastData}
-              color={isProcessing ? "#ffffff" : riskTheme.color}
-            />
-          </div>
-
-          {/* FOOTER: Switch de Ações - Alterna entre botões de comando e botão de cancelamento imediato */}
-          <footer className="relative h-11">
-            <AnimatePresence mode="wait">
-              {!isProcessing ? (
-                <motion.div
-                  key="actions"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="grid grid-cols-2 gap-4"
-                >
-                  <CommandButton
-                    onClick={handleAction}
-                    icon={Zap}
-                    color={riskTheme.color}
-                    risco={selectedAsset.risco_atual}
-                    className="cursor-pointer"
-                  >
-                    ACIONAR RESPOSTA
-                  </CommandButton>
-
-                  <CommandButton
-                    onClick={handleProtocol}
-                    icon={ShieldCheck}
-                    variant="outline"
-                    risco={selectedAsset.risco_atual}
-                    className="cursor-pointer"
-                  >
-                    PROTOCOLO
-                  </CommandButton>
-                </motion.div>
+            {/* PAINEL DE PROTOCOLOS */}
+            <div className="space-y-4">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black flex items-center gap-2">
+                <ShieldAlert size={12} className="text-zinc-600" />
+                Contingência Individual
+              </span>
+              {hasContingencyActions ? (
+                <ContingencyPanel
+                  actions={contingencyActions}
+                  onExecuteAction={onTriggerSingleResponse}
+                  disabled={isProcessing}
+                  isGlobalLoading={isGlobalLoading}
+                  risco={selectedAsset.risco_atual}
+                />
               ) : (
-                <motion.div
-                  key="cancel"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                >
-                  {/* BOTÃO DE EMERGÊNCIA: Estilo Branco "High-Contrast" para ação de aborto */}
-                  <Button
-                    onClick={handleCancel}
-                    className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-black uppercase italic tracking-tighter text-[11px] rounded-lg transition-all border-none shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer"
-                  >
-                    <AlertOctagon size={16} className="mr-2 animate-bounce" />
-                    CANCELAR OPERAÇÃO IMEDIATAMENTE
-                  </Button>
-                </motion.div>
+                <div className="p-4 rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 text-center">
+                  <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-tight">
+                    Nenhum protocolo disponível
+                  </p>
+                </div>
               )}
-            </AnimatePresence>
-          </footer>
-        </div>
+            </div>
+
+            {/* PROJEÇÃO PREDITIVA */}
+            <div className="space-y-4 min-h-55">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-black flex items-center gap-2">
+                <div
+                  className={`h-2 w-2 rounded-full ${
+                    isProcessing ? "bg-white animate-pulse" : ""
+                  }`}
+                  style={{
+                    backgroundColor: !isProcessing
+                      ? riskTheme.color
+                      : undefined,
+                  }}
+                />
+                {isProcessing
+                  ? "Validação em curso..."
+                  : "Projeção de Risco (24h)"}
+              </span>
+              <div className="h-48 w-full">
+                <ForecastChart
+                  data={forecastData}
+                  color={isProcessing ? "#ffffff" : riskTheme.color}
+                />
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        {/* FOOTER: Ações de Resposta Total */}
+        <footer className="p-6 bg-zinc-900/20 border-t border-zinc-800/50 shrink-0">
+          <AnimatePresence mode="wait">
+            {!isProcessing ? (
+              <motion.div
+                key="actions"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <CommandButton
+                  onClick={onTriggerFullResponse}
+                  icon={Zap}
+                  color={riskTheme.color}
+                  risco={
+                    !hasContingencyActions ? "Baixo" : selectedAsset.risco_atual
+                  }
+                  disabled={!isActionAvailable}
+                  className="w-full tracking-widest"
+                >
+                  Acionar Resposta Completa
+                </CommandButton>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="cancel"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <Button
+                  onClick={handleCancel}
+                  className="w-full h-11 bg-white hover:bg-zinc-200 text-black font-black uppercase italic text-[11px] rounded-lg shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                >
+                  <AlertOctagon size={16} className="mr-2 animate-pulse" />
+                  Cancelar Operação Imediatamente
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </footer>
       </motion.section>
     </AnimatePresence>
   );

@@ -1,16 +1,17 @@
 "use client";
 
-/**
- * COMPONENTES: TacticalBase
- * DESCRIÇÃO: Elementos atômicos da interface (Cards e Botões).
- * ATUALIZAÇÃO: Inserida lógica de bloqueio de segurança para riscos Moderado/Baixo.
- */
-
+import { useState } from "react";
 import type { ElementType, ReactNode, ButtonHTMLAttributes } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Play, Lock, Loader2 } from "lucide-react";
 
-// --- MetricCard: Exibe dados técnicos (Impacto, Severidade, etc) ---
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+// --- TYPES & INTERFACES ---
+
+export type OperationStatus = "idle" | "loading" | "success" | "error";
+
 interface MetricCardProps {
   label: string;
   value: string | number;
@@ -18,6 +19,24 @@ interface MetricCardProps {
   color?: string;
   className?: string;
 }
+
+interface CommandButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "outline";
+  icon: ElementType;
+  children: ReactNode;
+  color?: string;
+  risco?: string;
+}
+
+interface ContingencyPanelProps {
+  actions: string[];
+  onExecuteAction: (action: string) => void;
+  disabled?: boolean;
+  risco?: string;
+  isGlobalLoading?: boolean;
+}
+
+// --- SUB-COMPONENT: METRIC CARD ---
 
 export const MetricCard = ({
   label,
@@ -36,7 +55,6 @@ export const MetricCard = ({
     <span className="text-[9px] text-zinc-500 uppercase font-black flex items-center gap-1 tracking-wider">
       <Icon size={10} /> {label}
     </span>
-
     <div
       className="text-xs font-black italic uppercase tracking-tighter truncate"
       style={{ color }}
@@ -46,18 +64,98 @@ export const MetricCard = ({
   </div>
 );
 
-// --- CommandButton: Abstração com trava de segurança baseada em risco ---
-interface CommandButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "outline";
-  icon: ElementType;
-  children: ReactNode;
-  color?: string;
-  risco?: "Crítico" | "Alto" | "Moderado" | "Baixo" | string; // Prop para controle de lógica
-}
+// --- SUB-COMPONENT: CONTINGENCY PANEL ---
+
+export const ContingencyPanel = ({
+  actions,
+  onExecuteAction,
+  disabled,
+  risco,
+  isGlobalLoading,
+}: ContingencyPanelProps) => {
+  const isLockedByRisk = risco === "Moderado" || risco === "Baixo";
+  const [lastClickedAction, setLastClickedAction] = useState<string | null>(
+    null
+  );
+
+  const handleInternalClick = (action: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita conflito com swipe do toast
+    if (disabled || isLockedByRisk) return;
+    setLastClickedAction(action);
+    onExecuteAction(action);
+  };
+
+  return (
+    <ScrollArea className="h-full max-h-75 pr-3">
+      <div className="grid gap-2.5">
+        {actions.map((action, index) => {
+          const isThisLoading =
+            disabled && (isGlobalLoading || lastClickedAction === action);
+
+          return (
+            <button
+              key={index}
+              disabled={disabled || isLockedByRisk}
+              onClick={(e) => handleInternalClick(action, e)}
+              className={cn(
+                "group relative flex items-center justify-between p-3.5 rounded-xl border text-left transition-all duration-300",
+                "bg-zinc-900/40 border-zinc-800/80",
+                !disabled && !isLockedByRisk
+                  ? "cursor-pointer hover:border-emerald-500/50 hover:bg-zinc-800/60"
+                  : "disabled:pointer-events-auto cursor-not-allowed opacity-50",
+                isThisLoading &&
+                  "border-emerald-500 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.1)]",
+                isLockedByRisk && "grayscale opacity-30"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute left-0 top-1/4 bottom-1/4 w-0.5 bg-emerald-500 rounded-full opacity-0 transition-opacity",
+                  isThisLoading && "opacity-100"
+                )}
+              />
+
+              <span
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-tight transition-colors",
+                  isThisLoading
+                    ? "text-emerald-400"
+                    : "text-zinc-400 group-hover:text-zinc-100"
+                )}
+              >
+                {action}
+              </span>
+
+              <div className="shrink-0 ml-4">
+                {isLockedByRisk ? (
+                  <Lock size={14} className="text-zinc-700" />
+                ) : isThisLoading ? (
+                  <Loader2
+                    size={14}
+                    className="text-emerald-500 animate-spin"
+                  />
+                ) : (
+                  <div className="p-1.5 rounded-full bg-zinc-800/50 group-hover:bg-emerald-500 transition-all shadow-inner">
+                    <Play
+                      size={10}
+                      className="text-emerald-500 group-hover:text-black transition-colors fill-current"
+                    />
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
+};
+
+// --- SUB-COMPONENT: COMMAND BUTTON ---
 
 export const CommandButton = ({
   onClick,
-  variant = "primary",
+  variant: _variant, // Renomeado com underscore para ignorar erro de lint "unused-vars"
   icon: Icon,
   children,
   color,
@@ -66,73 +164,34 @@ export const CommandButton = ({
   className,
   ...props
 }: CommandButtonProps) => {
-  // Lógica de Bloqueio: Botões ficam inativos para risco Moderado e Baixo
   const isLockedByRisk = risco === "Moderado" || risco === "Baixo";
   const isEffectivelyDisabled = disabled || isLockedByRisk;
 
-  const commonStyles = cn(
-    "h-11 text-[11px] font-black uppercase transition-all active:scale-95",
-    "disabled:cursor-not-allowed disabled:opacity-40",
-    className
-  );
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation(); // Evita conflito com swipe do toast
+    if (onClick) onClick(e);
+  };
 
-  // Mensagem de auxílio no hover caso esteja travado
-  const tooltipTitle = isLockedByRisk
-    ? "Ação bloqueada: Nível de risco insuficiente"
-    : typeof children === "string"
-    ? children
-    : undefined;
-
-  // VARIANTE OUTLINE
-  if (variant === "outline") {
-    return (
-      <Button
-        {...props}
-        title={tooltipTitle}
-        onClick={onClick}
-        disabled={isEffectivelyDisabled}
-        variant="outline"
-        className={cn(
-          "border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800 gap-2 text-zinc-400 hover:text-white",
-          commonStyles
-        )}
-      >
-        <Icon
-          size={16}
-          className={cn(
-            isEffectivelyDisabled && !isLockedByRisk && "animate-spin"
-          )}
-        />
-        {children}
-      </Button>
-    );
-  }
-
-  // VARIANTE PRIMARY
   return (
     <Button
       {...props}
-      title={tooltipTitle}
-      onClick={onClick}
+      onClick={handleButtonClick}
       disabled={isEffectivelyDisabled}
       className={cn(
-        "group relative gap-0 text-white border-none shadow-lg shadow-black/40 overflow-hidden",
-        commonStyles
+        "group relative h-11 text-[11px] font-black uppercase transition-all active:scale-95 gap-2",
+        "text-white border-none shadow-lg shadow-black/40 overflow-hidden",
+        "disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-40",
+        className
       )}
       style={{
         backgroundColor: isEffectivelyDisabled ? "#27272a" : color,
       }}
     >
-      {/* Efeito de brilho apenas se estiver ativo */}
-      {!isEffectivelyDisabled && (
-        <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-      )}
-
       <Icon
         size={16}
         className={cn(
-          "mr-2 fill-current",
-          isEffectivelyDisabled ? "opacity-50" : "animate-pulse"
+          "fill-current",
+          !isEffectivelyDisabled && "animate-pulse"
         )}
       />
       {children}

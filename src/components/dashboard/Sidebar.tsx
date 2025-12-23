@@ -165,7 +165,7 @@ export function Sidebar({ assets, isMobile }: SidebarProps) {
                   key={asset.id}
                   onClick={() => setSelectedAsset(isSelected ? null : asset)}
                   className={`
-                    text-left p-4 rounded-xl transition-all border relative overflow-hidden group 
+                    text-left cursor-pointer p-4 rounded-xl transition-all border relative overflow-hidden group 
                     w-full lg:w-70 min-w-0 flex flex-col justify-between h-full
                     ${
                       isSelected

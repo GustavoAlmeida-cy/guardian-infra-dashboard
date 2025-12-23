@@ -1,10 +1,5 @@
 "use client";
 
-/**
- * GUARDIAN INFRA - CORE APPLICATION
- * Arquitetura: React 19 + TanStack Query V5 + Zustand
- * Objetivo: Orquestrar o monitoramento tático, alertas críticos e sincronização de dados.
- */
 import "leaflet/dist/leaflet.css";
 
 import { useState, useEffect, useRef } from "react";
@@ -47,7 +42,7 @@ const queryClient = new QueryClient({
 
 /**
  * @component AutomatedAlerts
- * Monitora ativos críticos e dispara notificações.
+ * Monitora ativos críticos e permite seleção rápida via clique no Toast.
  */
 function AutomatedAlerts({
   assets,
@@ -59,6 +54,7 @@ function AutomatedAlerts({
   source: string;
 }) {
   const alertedIds = useRef<Set<number | string>>(new Set());
+  const setSelectedAsset = useAssetStore((state) => state.setSelectedAsset);
 
   useEffect(() => {
     alertedIds.current.clear();
@@ -76,14 +72,24 @@ function AutomatedAlerts({
 
         toast.custom(
           (t) => (
-            <TacticalToast
-              t={t}
-              variant="danger"
-              title="SISTEMA: RISCO CRÍTICO"
-              icon={<AlertTriangle size={18} className="animate-pulse" />}
-              description={`Emergência em ${asset.nome}. Inicie protocolos.`}
-              onClose={() => toast.dismiss(t)}
-            />
+            <div
+              onClick={() => {
+                setSelectedAsset(asset);
+                toast.dismiss(t);
+              }}
+              className="cursor-pointer active:scale-[0.98] transition-all"
+              role="button"
+              aria-label={`Focar no ativo ${asset.nome}`}
+            >
+              <TacticalToast
+                t={t}
+                variant="danger"
+                title="SISTEMA: RISCO CRÍTICO"
+                icon={<AlertTriangle size={18} className="animate-pulse" />}
+                description={`Emergência em ${asset.nome}. Toque para interceptar.`}
+                onClose={() => toast.dismiss(t)}
+              />
+            </div>
           ),
           { duration: 10000, id: toastId }
         );
@@ -92,14 +98,13 @@ function AutomatedAlerts({
         toast.dismiss(toastId);
       }
     });
-  }, [assets, isActive]);
+  }, [assets, isActive, setSelectedAsset]);
 
   return null;
 }
 
 /**
  * @component DashboardContent
- * Layout e sincronização de dados.
  */
 function DashboardContent() {
   const { dataSource, selectedAsset, setSelectedAsset, setLastUpdate } =
@@ -111,7 +116,6 @@ function DashboardContent() {
   const [showSplash, setShowSplash] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Responsividade
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
@@ -119,7 +123,6 @@ function DashboardContent() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Splash Screen Lifecycle
   useEffect(() => {
     if (!isLoading) {
       const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -127,11 +130,9 @@ function DashboardContent() {
     }
   }, [isLoading]);
 
-  // Sincronização de Dados e Dependências Corrigidas
   useEffect(() => {
     if (assets.length > 0) {
       setLastUpdate(new Date());
-
       if (selectedAsset) {
         const freshData = assets.find((a) => a.id === selectedAsset.id);
         if (freshData && freshData.risco_atual !== selectedAsset.risco_atual) {
@@ -139,7 +140,6 @@ function DashboardContent() {
         }
       }
     }
-    // Incluídas as funções estáveis do store e o objeto de comparação
   }, [assets, selectedAsset, setSelectedAsset, setLastUpdate]);
 
   return (
@@ -192,7 +192,7 @@ function DashboardContent() {
               <DrawerTrigger asChild>
                 <Button
                   size="icon"
-                  className="h-14 w-14 rounded-full bg-red-600 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-none"
+                  className="h-14 w-14 rounded-full bg-red-600 shadow-[0_0_30px_rgba(220,38,38,0.4)] border-none active:scale-90 transition-transform"
                 >
                   <List className="text-white" size={24} />
                 </Button>
@@ -225,7 +225,10 @@ export default function App() {
         theme="dark"
         expand={true}
         visibleToasts={5}
-        toastOptions={{ unstyled: true }}
+        toastOptions={{
+          unstyled: true,
+          className: "pointer-events-auto",
+        }}
       />
       <DashboardContent />
     </QueryClientProvider>
