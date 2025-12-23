@@ -109,12 +109,15 @@
 <br />
 
 <h2 align="center" style="color: #f4f4f5;">🚀 Como Rodar</h2>
-<div style="background-color: #18181b; padding: 20px; border-radius: 8px; font-family: monospace; border: 1px solid #27272a;">
-  <code style="color: #3b82f6;">git clone</code> https://github.com/GustavoAlmeida-cy/guardian-infra-dashboard.git<br />
-  <code style="color: #3b82f6;">cd</code> guardian-infra-dashboard<br />
-  <code style="color: #3b82f6;">npm install</code><br />
-  <code style="color: #3b82f6;">npm run dev</code>
-</div>
+<pre>
+<code>
+git clone https://github.com/GustavoAlmeida-cy/guardian-infra-dashboard.git
+cd guardian-infra-dashboard
+npm install
+npm run dev
+</code>
+</pre>
+
 
 <br />
 
