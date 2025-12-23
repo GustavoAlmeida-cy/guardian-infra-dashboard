@@ -1,13 +1,8 @@
 "use client";
 
-/**
- * COMPONENTE: TacticalToast
- * DESCRIÇÃO: Sistema de notificação com estética militar/cyberpunk.
- * ATUALIZAÇÃO: Implementado suporte a gestos nativos de "Swipe" para fechar no mobile.
- */
-
+import { useEffect, useState } from "react";
 import type { ReactNode, MouseEvent } from "react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +23,21 @@ export function TacticalToast({
   variant = "info",
   onClose,
 }: TacticalToastProps) {
-  // --- CONFIGURAÇÃO DE TEMAS ---
+  // --- ESTADOS E RESPONSIVIDADE ---
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(false);
+
+  useEffect(() => {
+    const checkDevice = () => setIsMobileOrTablet(window.innerWidth < 1024);
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
+  // --- LÓGICA DE MOVIMENTO (FRAMER MOTION) ---
+  const x = useMotionValue(0);
+  const opacity = useTransform(x, [-150, 0, 150], [0, 1, 0]);
+
+  // --- TEMAS VISUAIS ---
   const variants = {
     danger: {
       border: "border-red-500/30",
@@ -69,97 +78,88 @@ export function TacticalToast({
 
   const theme = variants[variant];
 
-  /**
-   * FUNÇÃO DE FECHAMENTO CENTRALIZADA
-   */
+  // --- HANDLERS DE FECHAMENTO ---
   const triggerClose = () => {
-    if (onClose) {
-      onClose();
-    } else if (t) {
-      toast.dismiss(t);
-    }
+    if (onClose) onClose();
+    else if (t) toast.dismiss(t);
   };
 
   const handleDismiss = (e: MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // Impede abertura do ativo ao clicar no botão fechar
     triggerClose();
   };
 
   return (
     <motion.div
-      // --- LÓGICA DE GESTOS (SWIPE TO DISMISS) ---
-      drag="x" // Permite arrastar horizontalmente
-      dragConstraints={{ left: 0, right: 0 }} // Efeito mola para retornar ao centro
-      dragElastic={0.7}
+      // Comportamento de arrasto apenas em dispositivos touch
+      drag={isMobileOrTablet ? "x" : false}
+      dragListener={isMobileOrTablet}
+      style={{ x, opacity: isMobileOrTablet ? opacity : 1 }}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.8}
       onDragEnd={(_, info) => {
-        // Se o usuário arrastar mais de 100px para qualquer lado, fecha o toast
-        if (Math.abs(info.offset.x) > 100) {
-          triggerClose();
-        }
+        if (isMobileOrTablet && Math.abs(info.offset.x) > 80) triggerClose();
       }}
-      // --- ANIMAÇÕES ---
-      initial={{ opacity: 0, y: 15, scale: 0.95 }}
+      // Feedback de entrada/toque
+      initial={{ opacity: 0, y: 20, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{
-        opacity: 0,
-        scale: 0.8,
-        x: 50, // Sai lateralmente para reforçar o gesto de swipe
-        transition: { duration: 0.2 },
-      }}
-      whileTap={{ scale: 0.98 }} // Feedback tátil ao clicar/tocar
-      // --- ESTILIZAÇÃO ---
+      exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
+      whileTap={{ scale: 0.98 }}
       className={`
-        relative flex overflow-hidden rounded-lg
-        bg-zinc-950/95 border ${theme.border}
-        backdrop-blur-xl shadow-2xl ${theme.shadow}
-        w-[calc(100vw-32px)] md:w-80 
-        mx-auto md:mx-0 group
-        touch-none select-none cursor-grab active:cursor-grabbing
+        relative flex overflow-hidden rounded-xl
+        bg-zinc-950/98 border ${theme.border}
+        backdrop-blur-2xl shadow-2xl ${theme.shadow}
+        w-[calc(100vw-24px)] max-w-95 md:w-80
+        mx-auto md:mx-0 group select-none
+        ${
+          isMobileOrTablet
+            ? "touch-none cursor-grab active:cursor-grabbing"
+            : "cursor-pointer"
+        }
       `}
     >
-      {/* Barra Lateral de Destaque */}
-      <div className={`w-1 ${theme.accent} shrink-0`} />
+      {/* Indicador Lateral */}
+      <div className={`w-1.5 ${theme.accent} shrink-0`} />
 
-      <div className="flex gap-3 p-4 items-start w-full pr-10">
+      {/* Conteúdo da Notificação */}
+      <div className="flex gap-4 p-4 items-start w-full pr-12">
         {icon && (
           <div
-            className={`
-              flex items-center justify-center shrink-0 
-              w-8 h-8 rounded border border-white/5 
-              ${theme.bg} ${theme.text}
-            `}
+            className={`flex items-center justify-center shrink-0 w-9 h-9 rounded-lg border border-white/5 ${theme.bg} ${theme.text} shadow-inner`}
           >
             {icon}
           </div>
         )}
 
-        <div className="flex flex-col gap-1 text-left min-w-0">
+        <div className="flex flex-col gap-1.5 text-left min-w-0 py-0.5">
           <h4
-            className={`text-[10px] font-black uppercase tracking-widest leading-none truncate ${theme.text}`}
+            className={`text-[11px] font-black uppercase tracking-[0.15em] leading-none truncate ${theme.text}`}
           >
             {title}
           </h4>
           {description && (
-            <p className="text-[10px] text-zinc-400 font-mono leading-tight uppercase tracking-tight opacity-90 line-clamp-2">
+            <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase tracking-tight opacity-80 line-clamp-2">
               {description}
             </p>
           )}
         </div>
       </div>
 
-      {/* Botão X (Fallback para Desktop) */}
+      {/* Botão de Fechar (Interação Isolada) */}
       <button
         type="button"
         onClick={handleDismiss}
-        className="absolute top-2 right-2 z-50 p-2 rounded-md cursor-pointer text-zinc-500 hover:text-white hover:bg-white/10 transition-all duration-200"
+        className="absolute cursor-pointer top-0 right-1.5 bottom-0 px-3 flex items-center justify-center text-zinc-600 hover:text-white transition-colors z-50"
       >
-        <X size={14} />
+        <div className="p-1.5 rounded-full bg-zinc-900/50 group-hover:bg-zinc-800 transition-colors">
+          <X size={14} />
+        </div>
       </button>
 
-      {/* Efeito Glow de Fundo */}
+      {/* Detalhe Estético (Glow) */}
       <div
-        className={`absolute -top-4 -right-4 w-12 h-12 rounded-full blur-2xl opacity-10 ${theme.accent} pointer-events-none z-0`}
+        className={`absolute -top-6 -right-6 w-16 h-16 rounded-full blur-3xl opacity-20 ${theme.accent} pointer-events-none`}
       />
     </motion.div>
   );
